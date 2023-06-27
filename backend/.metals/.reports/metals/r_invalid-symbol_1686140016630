@@ -1,0 +1,3 @@
+Symbol: controllers/UserController#getUser().(id)
+Error message: controllers/UserController#getUser().(id)
+Error: scala.meta.internal.mtags.IndexingExceptions$InvalidSymbolException: controllers/UserController#getUser().(id)

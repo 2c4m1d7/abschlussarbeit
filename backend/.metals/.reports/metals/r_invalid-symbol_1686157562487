@@ -1,0 +1,3 @@
+Symbol: controllers/UserController#jedisPool.
+Error message: controllers/UserController#jedisPool.
+Error: scala.meta.internal.mtags.IndexingExceptions$InvalidSymbolException: controllers/UserController#jedisPool.

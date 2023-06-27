@@ -1,0 +1,3 @@
+Symbol: java/lang/module/ModuleDescriptor#
+Error message: java/lang/module/ModuleDescriptor#
+Error: scala.meta.internal.mtags.IndexingExceptions$InvalidSymbolException: java/lang/module/ModuleDescriptor#
