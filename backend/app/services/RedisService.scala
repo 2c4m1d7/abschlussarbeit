@@ -29,18 +29,10 @@ class RedisService @Inject() (implicit
 
   var redisInstances: List[Redis] = List()
 
-  Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
-    override def run(): Unit = {
-      redisInstances.foreach(_.shutdown())
-    }
-  }))
+    Runtime.getRuntime.addShutdownHook(new Thread(() => redisInstances.foreach(_.shutdown())))
 
   def createDB(dbName: String): Int = {
     val dbPath = redisDirPath + "/" + dbName
-
-    // val mkdir =
-    //   "mkdir " + redisDirPath + "  " + dbPath
-    // mkdir.!
 
     val redisDir = new File(redisDirPath)
     redisDir.mkdir()

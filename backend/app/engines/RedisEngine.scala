@@ -6,7 +6,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import play.api.Configuration
 import javax.inject.Inject
-import scredis.ShutdownModifier
+
 class RedisEngine (redisInstance: Redis, configuration: Configuration) extends Runnable {
 
   val redisHost = configuration.get[String]("redis_host")
@@ -16,7 +16,7 @@ class RedisEngine (redisInstance: Redis, configuration: Configuration) extends R
 
     while (keepAlive) {
 
-      Thread.sleep(1 * 60000/4) // 1 hour
+      Thread.sleep(60 * 60000) // 1 hour
       val connectionQuantity = Await.result(redisInstance.clientList(), 10.seconds).size
 
       if (connectionQuantity < 2) {
