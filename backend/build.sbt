@@ -17,6 +17,7 @@ libraryDependencies ++= Seq(
   "org.apache.directory.api" % "api-all" % "2.1.3",
   "com.github.jwt-scala" %% "jwt-core" % "8.0.2",
   "com.github.jwt-scala" %% "jwt-play-json" % "8.0.2",
+  "com.github.scredis" %% "scredis" % "2.4.3"
 )
 
 libraryDependencies += ws

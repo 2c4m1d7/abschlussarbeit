@@ -15,4 +15,9 @@ server.pid
 /dist/
 .cache
 
+.bloop/
+.metals/
+data/
+.g8/
+.vscode
 .DS_Store

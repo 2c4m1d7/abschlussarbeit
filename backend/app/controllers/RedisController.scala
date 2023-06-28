@@ -18,14 +18,12 @@ class RedisController @Inject() (
 ) extends AbstractController(cc) {
 
   def addDB(dbName: String) = Action { implicit request: Request[AnyContent] =>
-    //  Ok(Json.toJson(redisService.createDB(dbName).body))
-    
-    Ok(Json.toJson(redisService.createDB()))
+    Ok(Json.toJson(redisService.createDB(dbName)))
   }
 
   def deleteDB(dbName: String, port: Long) = Action {
     implicit request: Request[AnyContent] =>
-      redisService.deleteDB(dbName, port)
+      // redisService.deleteDB(dbName, port)
       Ok("")
   }
 

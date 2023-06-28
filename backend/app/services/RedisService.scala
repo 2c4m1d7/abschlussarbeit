@@ -12,61 +12,80 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import sys.process._
 import utils.Utils
+import engines.RedisEngine
+import scredis.Client
+import akka.actor.ActorSystem
+import scredis.Redis
+import scredis.RedisConfig
+import java.io.File
 
 class RedisService @Inject() (implicit
     ws: WSClient,
     configuration: Configuration
 ) {
   val redisHost = configuration.get[String]("redis_host")
-  val redisDir = configuration.get[String]("redis_directory")
+  val redisDirPath = configuration.get[String]("redis_directory")
+  implicit val system = ActorSystem("my-actor-system")
 
-  def createDB(dbName: String): WSResponse = {
-    val request: WSRequest =
-      ws.url(redisHost + "/create-redis.php")
+  var redisInstances: List[Redis] = List()
 
-    val futureResponse: Future[WSResponse] = request
-      .addHttpHeaders("Content-Type" -> "application/x-www-form-urlencoded")
-      .post("name=" + dbName)
+  Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
+    override def run(): Unit = {
+      redisInstances.foreach(_.shutdown())
+    }
+  }))
 
-    val response =
-      Await.result[WSResponse](futureResponse, Duration.apply(5, "s"))
+  def createDB(dbName: String): Int = {
+    val dbPath = redisDirPath + "/" + dbName
 
-    response
+    // val mkdir =
+    //   "mkdir " + redisDirPath + "  " + dbPath
+    // mkdir.!
+
+    val redisDir = new File(redisDirPath)
+    redisDir.mkdir()
+
+    val dbFolder = new File(dbPath)
+    dbFolder.mkdir()
+
+    return startDB(dbName);
   }
 
-  def createDB(): Int = {
+  def startDB(dbName: String): Int = {
+    // TODO: check if db exists
 
-    val mkdir =
-      "mkdir " + redisDir + "  " + redisDir + "/testDB" // TODO: add db name to parameters
-    mkdir.!
-    Seq("")
+    val dbPath = redisDirPath + "/" + dbName
+
     var exitCode = 1
-    var availablePort = -1
+    var redisPort = -1
     var startPort = 49152
     do {
 
-      availablePort =
-        Utils.findAvailablePort("127.0.0.1", startPort, 65535).getOrElse(-1)
+      redisPort =
+        Utils.findAvailablePort(redisHost, startPort, 65535).getOrElse(-1)
 
-      if (availablePort == -1) {
-        return -1;
+      if (redisPort == -1) {
+        return -1; // TODO: handle this
       }
       val startRedis =
-        "bash ./php/start_redis.sh " + availablePort + " testDB"
+        "bash ./sh/start_redis.sh " + redisPort + " " + dbPath
       val process = startRedis.run()
       exitCode = process.exitValue()
+
       if (exitCode != 0) {
-        startPort = availablePort + 1
+        startPort = redisPort + 1
       }
     } while (exitCode != 0)
 
-    return availablePort;
-  }
+    val redisInstance = Redis(
+      host = redisHost,
+      port = redisPort
+    )
+    redisInstances = redisInstance :: redisInstances
 
-  def deleteDB(dbName: String, port: Long): Unit = {
+    new Thread(new RedisEngine(redisInstance, configuration)).start()
 
-    ws.url(redisHost + "/delete.php/" + dbName + "/" + port)
-      .delete()
+    return redisPort;
   }
 
 }
