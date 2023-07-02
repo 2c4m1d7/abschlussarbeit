@@ -3,7 +3,7 @@ package utils
 import java.net.{InetSocketAddress, Socket}
 import views.html.defaultpages.error
 
-object Utils {
+object ConnectionUtils {
 
   def isPortOpen(host: String, port: Int): Boolean = {
       val socket = new Socket()

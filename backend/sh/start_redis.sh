@@ -1,9 +1,10 @@
 #!/bin/bash
 port=$1
 path=$2
+dbName=$3
 
 # --protected-mode no
-redis-server --port $port --appendonly yes --dir $path > /dev/null 2>&1 &
+redis-server --port $port --appendonly yes --dir $path --dbfilename $dbName  > /dev/null 2>&1 &
 
 max_attempts=10
 interval=0.1  

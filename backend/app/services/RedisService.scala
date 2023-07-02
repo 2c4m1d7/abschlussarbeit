@@ -8,16 +8,21 @@ import scala.concurrent.Future
 import play.api.libs.ws.WSResponse
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Await
+import scala.concurrent.duration._
 
-import scala.concurrent.duration.Duration
 import sys.process._
-import utils.Utils
+import utils.ConnectionUtils
 import engines.RedisEngine
 import scredis.Client
 import akka.actor.ActorSystem
 import scredis.Redis
-import scredis.RedisConfig
 import java.io.File
+import java.nio.file.Path
+import java.nio.file.Files
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.FileVisitResult
+import utils.FileUtils
 
 class RedisService @Inject() (implicit
     ws: WSClient,
@@ -27,11 +32,13 @@ class RedisService @Inject() (implicit
   val redisDirPath = configuration.get[String]("redis_directory")
   implicit val system = ActorSystem("my-actor-system")
 
-  var redisInstances: List[Redis] = List()
+  var redisInstances: Map[String, Redis] = Map()
 
-    Runtime.getRuntime.addShutdownHook(new Thread(() => redisInstances.foreach(_.shutdown())))
+  Runtime.getRuntime.addShutdownHook(
+    new Thread(() => redisInstances.foreach(_._2.shutdown()))
+  )
 
-  def createDB(dbName: String): Int = {
+  def create(dbName: String): Int = {
     val dbPath = redisDirPath + "/" + dbName
 
     val redisDir = new File(redisDirPath)
@@ -40,12 +47,14 @@ class RedisService @Inject() (implicit
     val dbFolder = new File(dbPath)
     dbFolder.mkdir()
 
-    return startDB(dbName);
+    return start(dbName);
   }
 
-  def startDB(dbName: String): Int = {
+  def start(dbName: String): Int = {
     // TODO: check if db exists
-
+    if (redisInstances.contains(dbName)) {
+      return redisInstances(dbName).port
+    }
     val dbPath = redisDirPath + "/" + dbName
 
     var exitCode = 1
@@ -53,14 +62,15 @@ class RedisService @Inject() (implicit
     var startPort = 49152
     do {
 
-      redisPort =
-        Utils.findAvailablePort(redisHost, startPort, 65535).getOrElse(-1)
+      redisPort = ConnectionUtils
+        .findAvailablePort(redisHost, startPort, 65535)
+        .getOrElse(-1)
 
       if (redisPort == -1) {
         return -1; // TODO: handle this
       }
       val startRedis =
-        "bash ./sh/start_redis.sh " + redisPort + " " + dbPath
+        "bash ./sh/start_redis.sh " + redisPort + " " + dbPath + " " + dbName
       val process = startRedis.run()
       exitCode = process.exitValue()
 
@@ -73,11 +83,59 @@ class RedisService @Inject() (implicit
       host = redisHost,
       port = redisPort
     )
-    redisInstances = redisInstance :: redisInstances
+    //  val redisInstance2 = RedisEngine(
+    //  redisHost,
+    //   redisPort,
+    //   configuration
+    // )
+
+    redisInstances = redisInstances + ((dbName, redisInstance))
 
     new Thread(new RedisEngine(redisInstance, configuration)).start()
 
     return redisPort;
+  }
+
+  def delete(dbName: String): Unit = {
+
+    val instance = redisInstances(dbName)
+    s"redis-cli -h ${instance.host} -p ${instance.port} shutdown".!
+    redisInstances = redisInstances.removed(dbName)
+
+
+    // findInstance(dbName).foreach(i => {
+    //   println("Shutting down " + dbName)
+    //   redisInstances = redisInstances.removed(dbName)
+    //   s"redis-cli -h ${i._2.host} -p ${i._2.port} shutdown".!
+
+    // })
+
+    // findInstance(dbName).foreach(i => {
+    //   i._2.shutdown()
+    //   redisInstances =
+    //     redisInstances.removed(dbName)
+    // })
+    println(redisInstances.size)
+
+    val directoryPath = Path.of(redisDirPath, dbName)
+    FileUtils.deleteDir(directoryPath)
+  }
+
+  private def dbNameExists(name: String): Boolean = {
+    val directory = new File(redisDirPath)
+    // directory.listFiles().foreach(x => println(x.getName))
+    directory.listFiles.exists(_.getName == name)
+  }
+
+  private def findInstance(dbName: String): Option[(String, Redis)] = {
+
+    redisInstances.find(x =>
+      // Await
+      //   .result(x.configGet("dbfilename"), 1.seconds)
+      //   .values
+      //   .exists(_.equals(dbName))
+      x._1.equals(dbName)
+    )
   }
 
 }

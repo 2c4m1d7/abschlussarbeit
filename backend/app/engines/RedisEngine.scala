@@ -7,25 +7,34 @@ import scala.concurrent.duration._
 import play.api.Configuration
 import javax.inject.Inject
 
-class RedisEngine (redisInstance: Redis, configuration: Configuration) extends Runnable {
+class RedisEngine(redisInstance: Redis, configuration: Configuration)
+    extends Runnable {
 
   val redisHost = configuration.get[String]("redis_host")
   override def run(): Unit = {
 
-    var keepAlive = true
+    var continue = true
+    var timeNotInUse = 0
+    try {
+      while (continue) {
 
-    while (keepAlive) {
+        Thread.sleep(1000)
+        val connectionQuantity =
+          Await.result(redisInstance.clientList(), 1.seconds).size
 
-      Thread.sleep(60 * 60000) // 1 hour
-      val connectionQuantity = Await.result(redisInstance.clientList(), 10.seconds).size
-
-      if (connectionQuantity < 2) {
-        keepAlive = false
+        if (connectionQuantity < 2) {
+          timeNotInUse += 1
+        } else {
+          timeNotInUse = 0
+        }
+        if (timeNotInUse > 3600) {
+          continue = false
+        }
       }
-
+      redisInstance.shutdown()
+    } catch {
+      case e: Exception => println(e.getMessage())
     }
-    redisInstance.shutdown()
-
   }
 
 }

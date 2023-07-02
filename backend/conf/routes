@@ -4,7 +4,7 @@
 # ~~~~
 
 # An example controller showing a sample home page
-DELETE /redis/delete/:dbName/:port                          controllers.RedisController.deleteDB(dbName : String, port: Long)
+DELETE /redis/delete/:dbName                       controllers.RedisController.deleteDB(dbName : String)
 POST /redis/database                                        controllers.RedisController.addDB(dbName: String)
 
 # Map static resources from the /public folder to the /assets URL path
