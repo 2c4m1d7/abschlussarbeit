@@ -12,7 +12,7 @@ import scala.concurrent.duration._
 
 import sys.process._
 import utils.ConnectionUtils
-import engines.RedisEngine
+import engines.RedisInstanceManager
 import scredis.Client
 import akka.actor.ActorSystem
 import scredis.Redis
@@ -26,11 +26,11 @@ import utils.FileUtils
 
 class RedisService @Inject() (implicit
     ws: WSClient,
-    configuration: Configuration
+    configuration: Configuration,
+    system: ActorSystem
 ) {
   val redisHost = configuration.get[String]("redis_host")
   val redisDirPath = configuration.get[String]("redis_directory")
-  implicit val system = ActorSystem("my-actor-system")
 
   var redisInstances: Map[String, Redis] = Map()
 
@@ -44,8 +44,8 @@ class RedisService @Inject() (implicit
     val redisDir = new File(redisDirPath)
     redisDir.mkdir()
 
-    val dbFolder = new File(dbPath)
-    dbFolder.mkdir()
+    val db = new File(dbPath)
+    db.mkdir()
 
     return start(dbName);
   }
@@ -83,15 +83,10 @@ class RedisService @Inject() (implicit
       host = redisHost,
       port = redisPort
     )
-    //  val redisInstance2 = RedisEngine(
-    //  redisHost,
-    //   redisPort,
-    //   configuration
-    // )
 
     redisInstances = redisInstances + ((dbName, redisInstance))
 
-    new Thread(new RedisEngine(redisInstance, configuration)).start()
+    new Thread(new RedisInstanceManager(redisInstance, configuration)).start()
 
     return redisPort;
   }
@@ -102,40 +97,14 @@ class RedisService @Inject() (implicit
     s"redis-cli -h ${instance.host} -p ${instance.port} shutdown".!
     redisInstances = redisInstances.removed(dbName)
 
-
-    // findInstance(dbName).foreach(i => {
-    //   println("Shutting down " + dbName)
-    //   redisInstances = redisInstances.removed(dbName)
-    //   s"redis-cli -h ${i._2.host} -p ${i._2.port} shutdown".!
-
-    // })
-
-    // findInstance(dbName).foreach(i => {
-    //   i._2.shutdown()
-    //   redisInstances =
-    //     redisInstances.removed(dbName)
-    // })
-    println(redisInstances.size)
-
     val directoryPath = Path.of(redisDirPath, dbName)
     FileUtils.deleteDir(directoryPath)
   }
 
-  private def dbNameExists(name: String): Boolean = {
+  def dbNameExists(name: String): Boolean = {
     val directory = new File(redisDirPath)
     // directory.listFiles().foreach(x => println(x.getName))
     directory.listFiles.exists(_.getName == name)
-  }
-
-  private def findInstance(dbName: String): Option[(String, Redis)] = {
-
-    redisInstances.find(x =>
-      // Await
-      //   .result(x.configGet("dbfilename"), 1.seconds)
-      //   .values
-      //   .exists(_.equals(dbName))
-      x._1.equals(dbName)
-    )
   }
 
 }

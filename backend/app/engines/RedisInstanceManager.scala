@@ -7,8 +7,9 @@ import scala.concurrent.duration._
 import play.api.Configuration
 import javax.inject.Inject
 
-class RedisEngine(redisInstance: Redis, configuration: Configuration)
+class RedisInstanceManager (redisInstance: Redis,  configuration: Configuration)
     extends Runnable {
+
 
   val redisHost = configuration.get[String]("redis_host")
   override def run(): Unit = {
@@ -27,7 +28,7 @@ class RedisEngine(redisInstance: Redis, configuration: Configuration)
         } else {
           timeNotInUse = 0
         }
-        if (timeNotInUse > 3600) {
+        if (timeNotInUse > 10) {
           continue = false
         }
       }
