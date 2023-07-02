@@ -27,4 +27,8 @@ class RedisController @Inject() (
       Ok("")
   }
 
+  def exists(dbName:String) = Action { implicit request: Request[AnyContent] =>
+    Ok(Json.toJson(redisService.dbExists(dbName)))
+  }
+
 }
