@@ -1,11 +1,9 @@
 package services
 
 import javax.inject.Inject
-import play.api.libs.ws.WSClient
-import play.api.libs.ws.WSRequest
 import play.api.Configuration
 import scala.concurrent.Future
-import play.api.libs.ws.WSResponse
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -23,21 +21,18 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.FileVisitResult
 import utils.FileUtils
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class RedisService @Inject() (implicit
-    ws: WSClient,
     configuration: Configuration,
     system: ActorSystem
-)  {
+) {
   val redisHost = configuration.get[String]("redis_host")
   val redisDirPath = configuration.get[String]("redis_directory")
 
   var redisInstances: Map[String, Redis] = Map()
-
-  Runtime.getRuntime.addShutdownHook(
-    new Thread(() => redisInstances.foreach(_._2.shutdown()))
-  )
+  val log = LoggerFactory.getLogger(this.getClass());
 
   def create(dbName: String): Int = {
     val dbPath = redisDirPath + "/" + dbName
@@ -93,13 +88,12 @@ class RedisService @Inject() (implicit
 
   def delete(dbName: String): Unit = {
 
-    try {
-      val instance = redisInstances(dbName)
+    val instance = redisInstances.getOrElse(dbName, null)
+    if (instance != null) {
       s"redis-cli -h ${instance.host} -p ${instance.port} shutdown".!
       redisInstances = redisInstances.removed(dbName)
-    } catch {
-      case e: NoSuchElementException => 
     }
+
     val directoryPath = Path.of(redisDirPath, dbName)
     FileUtils.deleteDir(directoryPath)
   }
@@ -109,4 +103,7 @@ class RedisService @Inject() (implicit
     directory.listFiles.exists(_.getName.equals(name))
   }
 
+  Runtime.getRuntime.addShutdownHook(
+    new Thread(() => redisInstances.foreach(_._2.shutdown()))
+  )
 }

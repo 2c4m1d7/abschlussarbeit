@@ -1,5 +1,4 @@
 name := """backend"""
-organization := "htw"
 
 version := "1.0-SNAPSHOT"
 
@@ -17,14 +16,7 @@ libraryDependencies ++= Seq(
   "org.apache.directory.api" % "api-all" % "2.1.3",
   "com.github.jwt-scala" %% "jwt-core" % "8.0.2",
   "com.github.jwt-scala" %% "jwt-play-json" % "8.0.2",
-  "com.github.scredis" %% "scredis" % "2.4.3"
+  "com.github.scredis" %% "scredis" % "2.4.3",
+  "org.postgresql" % "postgresql" % "42.6.0"
 )
 
-libraryDependencies += ws
-libraryDependencies += ehcache
-
-// Adds additional packages into Twirl
-//TwirlKeys.templateImports += "htw.controllers._"
-
-// Adds additional packages into conf/routes
-// play.sbt.routes.RoutesKeys.routesImport += "htw.binders._"
