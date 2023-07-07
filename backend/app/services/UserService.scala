@@ -53,15 +53,12 @@ class UserService @Inject() (
 
 object UserService {
   object Exceptions {
-    sealed abstract class UserServiceException(message: String)
-        extends RuntimeException(message)
-
     final case class NotFound(message: String = "User not found")
-        extends UserServiceException(message)
+        extends RuntimeException(message)
     final case class AccessDenied(
         message: String = "Access denied. You are not the instance owner"
-    ) extends UserServiceException(message)
+    ) extends RuntimeException(message)
     final case class InternalError(message: String = "Internal error")
-        extends UserServiceException(message)
+        extends RuntimeException(message)
   }
 }

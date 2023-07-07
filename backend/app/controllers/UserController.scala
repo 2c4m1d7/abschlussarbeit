@@ -27,11 +27,11 @@ class UserController @Inject() (
     )
     userService.addUser(user)
      .map(user => Ok(Json.toJson(user)))
-     .recoverWith { case e: UserService.Exceptions.UserServiceException => exceptionToResult(e) }
+     .recoverWith { case e: RuntimeException => exceptionToResult(e) }
 
   }
 
-    def exceptionToResult(e: UserService.Exceptions.UserServiceException): Future[Result] = e match {
+    def exceptionToResult(e: RuntimeException): Future[Result] = e match {
     case _: UserService.Exceptions.NotFound      => Future.successful(NotFound(e.getMessage))
     case _: UserService.Exceptions.AccessDenied  => Future.successful(Forbidden(e.getMessage))
     case _: UserService.Exceptions.InternalError => Future.successful(BadRequest(e.getMessage))

@@ -30,7 +30,7 @@ class RedisInstanceManager @Inject() (redisInstance: Redis)(implicit
         } else {
           timeNotInUse = 0
         }
-        if (timeNotInUse > 10) {
+        if (timeNotInUse > 3600000) {
           continue = false
         }
       } catch {

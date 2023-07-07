@@ -14,6 +14,8 @@ final case class User(
     employeeType: String
 ) 
 
+
+
 object User {
   implicit val userFormat: OFormat[User] = Json.format[User]
 }

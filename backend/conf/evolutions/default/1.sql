@@ -12,6 +12,8 @@ create table users
     employee_type varchar not null
 );
 
+
+
 -- !Downs
 
 drop table "users" if exists;
