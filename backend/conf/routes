@@ -3,7 +3,12 @@
 # https://www.playframework.com/documentation/latest/ScalaRouting
 # ~~~~
 
-# An example controller showing a sample home page
+#auth
+
+POST /signin                                    controllers.AuthController.signIn()
+
+
+
 DELETE /redis/delete/:dbName                       controllers.RedisController.deleteDB(dbName : String)
 POST /redis/database                                        controllers.RedisController.addDB(dbName: String)
 

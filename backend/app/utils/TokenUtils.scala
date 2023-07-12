@@ -16,7 +16,7 @@ import auth._
 import scala.util.Success
 import scala.util.Failure
 
-abstract class TokenUtils @Inject() (configuration: Configuration) {
+class TokenUtils @Inject() (configuration: Configuration) {
 
   val SECRET_KEY: String = configuration.get[String]("jwt.secret_key")
 
@@ -28,7 +28,8 @@ abstract class TokenUtils @Inject() (configuration: Configuration) {
   val refreshExpirationTime: Long =
     configuration.get[Long]("jwt.refresh_expiration_time")
 
-  def generateTokens(userId: UUID, currentTimestamp: Long): AuthResponse = {
+  def generateTokens(userId: UUID): AuthResponse = {
+     val currentTimestamp = Instant.now().getEpochSecond()
     AuthResponse(
       accessToken = generateToken(
         AccessTokenContent(userId),
