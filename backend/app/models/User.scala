@@ -12,9 +12,7 @@ final case class User(
     lastName: String,
     mail: String,
     employeeType: String
-) 
-
-
+)
 
 object User {
   implicit val userFormat: OFormat[User] = Json.format[User]

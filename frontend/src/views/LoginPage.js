@@ -42,9 +42,8 @@ const LoginPage = (props) => {
       headers: {
         Accept: 'application/json',
         "Content-Type": "application/json",
-        
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     })
     .then(response => {
       return response.json()
@@ -58,6 +57,8 @@ const LoginPage = (props) => {
     }).catch(error => {
       console.log(error)
     })
+
+
 
   }
 
