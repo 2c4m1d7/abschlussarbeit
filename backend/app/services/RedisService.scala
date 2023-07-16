@@ -34,7 +34,7 @@ class RedisService @Inject() (implicit
   var redisInstances: Map[String, Redis] = Map()
   val log = LoggerFactory.getLogger(this.getClass());
 
-  def create(dbName: String): Int = {
+  def create(dbName: String): Future[Int] = {
     val dbPath = redisDirPath + "/" + dbName
 
     val redisDir = new File(redisDirPath)
@@ -46,9 +46,9 @@ class RedisService @Inject() (implicit
     return start(dbName);
   }
 
-  def start(dbName: String): Int = {
+  def start(dbName: String): Future[Int] = {
     if (redisInstances.contains(dbName)) {
-      return redisInstances(dbName).port
+      return Future.successful(redisInstances(dbName).port)
     }
     val dbPath = redisDirPath + "/" + dbName
 
@@ -62,7 +62,7 @@ class RedisService @Inject() (implicit
         .getOrElse(-1)
 
       if (redisPort == -1) {
-        return -1; // TODO: handle this
+        return Future.failed(new RuntimeException("Redis port not found")); // TODO: handle this
       }
       val startRedis =
         s"bash ./sh/start_redis.sh $redisPort $dbPath $dbName"
@@ -83,7 +83,7 @@ class RedisService @Inject() (implicit
 
     new Thread(new RedisInstanceManager(redisInstance)).start()
 
-    return redisPort;
+    return Future.successful(redisPort);
   }
 
   def delete(dbName: String): Unit = {

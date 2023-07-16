@@ -20,7 +20,7 @@ class UserService @Inject() (
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  def getUserById(userId: UUID): Future[User] =
+  def findUserById(userId: UUID): Future[User] =
     userRepository
       .getUserById(userId)
       .recoverWith { case t: Throwable => internalError(t.getMessage) }
@@ -29,19 +29,40 @@ class UserService @Inject() (
         case Some(user) => Future.successful(user)
       }
 
-  def addUser(user: User): Future[User] = {
+  def findUserByUsername(username: String): Future[User] = {
     userRepository
-      .addUser(user)
+      .getUserByUsername(username)
+      .recoverWith { case t: Throwable => internalError(t.getMessage) }
+      .flatMap {
+        case None       => notFoundUsernameError(username)
+        case Some(user) => Future.successful(user)
+      }
+  }
+
+  def addUser(user: User): Future[User] = {
+
+    userRepository
+      .addUser(user.copy(UUID.randomUUID()))
       .recoverWith { case t: Throwable =>
         internalError(t.getMessage)
       }
-      .flatMap(getUserById(_))
+      .flatMap(findUserById(_))
   }
+
+
+
 
   private def notFoundUserIdError(userId: UUID) =
     Future.failed(
       UserService.Exceptions.NotFound(
         s"There is no user with user_id: ${userId.toString()}"
+      )
+    )
+
+  private def notFoundUsernameError(username: String) =
+    Future.failed(
+      UserService.Exceptions.NotFound(
+        s"There is no user with username: ${username}"
       )
     )
 

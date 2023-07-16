@@ -21,7 +21,7 @@ class UserController @Inject() (
 
   def addUser() = Action.async { implicit request: Request[AnyContent] =>
     val user = User(
-      id = UUID.randomUUID(),
+      id = null,
       username = request.body.asJson.get("username").as[String],
       firstName = request.body.asJson.get("firstName").as[String],
       lastName = request.body.asJson.get("lastName").as[String],

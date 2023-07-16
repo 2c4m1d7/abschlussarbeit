@@ -25,10 +25,6 @@ class LdapService @Inject() (config: Configuration)(implicit ec: ExecutionContex
       user <- getUserFromEntry(entry, username)
 
     } yield {
-      print(ldapConnectionConfig)
-      print(ldapConnection)
-      print(entry)
-      print(user)
       user
     }
 
@@ -129,7 +125,7 @@ class LdapService @Inject() (config: Configuration)(implicit ec: ExecutionContex
       val lastName = getStringWithFallBack(entry, "sn", "Undefined")
       val mail = getStringWithFallBack(entry, "mail", "")
       val employeeType = getStringWithFallBack(entry, "employeetype", "Uncategorized")
-      User(UUID.randomUUID(), username, firstName, lastName, mail, employeeType)
+      User( null, username, firstName, lastName, mail, employeeType)
     }
 
   private def getStringWithFallBack(entry: Entry, key: String, fallBack: String): String =

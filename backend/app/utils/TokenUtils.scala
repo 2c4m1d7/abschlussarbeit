@@ -18,18 +18,18 @@ import scala.util.Failure
 
 class TokenUtils @Inject() (configuration: Configuration) {
 
-  val SECRET_KEY: String = configuration.get[String]("jwt.secret_key")
+  private val SECRET_KEY: String = configuration.get[String]("jwt.secret_key")
 
-  val hmacAlgorithm = JwtAlgorithm.HS256
+  private val hmacAlgorithm = JwtAlgorithm.HS256
 
-  val accessExpirationTime: Long =
+  private val accessExpirationTime: Long =
     configuration.get[Long]("jwt.access_expiration_time")
 
-  val refreshExpirationTime: Long =
+  private val refreshExpirationTime: Long =
     configuration.get[Long]("jwt.refresh_expiration_time")
 
   def generateTokens(userId: UUID): AuthResponse = {
-     val currentTimestamp = Instant.now().getEpochSecond()
+    val currentTimestamp = Instant.now().getEpochSecond()
     AuthResponse(
       accessToken = generateToken(
         AccessTokenContent(userId),
@@ -66,6 +66,11 @@ class TokenUtils @Inject() (configuration: Configuration) {
         }
       case Failure(_) => None
     }
+  }
+
+  def getJwtClaims(token: String): Option[JwtClaim] = {
+    println(token)
+    Jwt.decode(token, SECRET_KEY, Seq(hmacAlgorithm)).toOption
   }
 
   private def generateToken(
