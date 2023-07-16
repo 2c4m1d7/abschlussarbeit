@@ -15,13 +15,14 @@ import play.api.mvc.Results.Unauthorized
 import play.api.mvc.Results.BadRequest
 import javax.inject.Inject
 import play.api.mvc.BodyParsers
+import play.api.Logging
 
 class SecuredAction @Inject() (
     parser: BodyParsers.Default,
     authManager: AuthManager
 )(implicit
     val ec: ExecutionContext
-) extends ActionBuilderImpl(parser) {
+) extends ActionBuilderImpl(parser)  with Logging  {
 
   override def invokeBlock[A](
       request: Request[A],
@@ -51,7 +52,7 @@ class SecuredAction @Inject() (
   def exceptionToResult(
       error: SecuredAction.Exceptions.SecuredActionException
   ): Future[Result] = {
-    // logger.warn(error.getMessage)
+    logger.warn(error.getMessage)
     error match {
       case _: SecuredAction.Exceptions.MissingAccessTokenRejection =>
         Future.successful(Unauthorized(error.getMessage))
