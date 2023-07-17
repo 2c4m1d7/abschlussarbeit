@@ -16,12 +16,15 @@ import auth.AuthContent
 import play.api.libs.json.Json
 import auth.AccessTokenContent
 import pdi.jwt.JwtClaim
+import java.time.Instant
+import play.api.Logger
 
 class AuthManager @Inject() (
     configuration: Configuration,
     userService: UserService,
     ldapService: LdapService,
-    tokenUtils: TokenUtils
+    tokenUtils: TokenUtils,
+    logger: Logger
 )(implicit
     ec: ExecutionContext
 ) {
@@ -46,7 +49,7 @@ class AuthManager @Inject() (
   }
 
   def serviceErrorMapper(exception: ServiceException): Future[Nothing] = {
-    // logger.error(exception.getMessage)
+    logger.error(exception.getMessage)
     exception match {
       case e: LdapService.Exceptions.AccessDenied =>
         Future.failed(AuthManager.Exceptions.AccessDenied(e.getMessage))
@@ -59,7 +62,7 @@ class AuthManager @Inject() (
     }
   }
   private def internalError(errorMessage: String): Future[Nothing] = {
-    // logger.error(errorMessage)
+    logger.error(errorMessage)
     Future.failed(AuthManager.Exceptions.InternalError(errorMessage))
   }
 
@@ -73,7 +76,8 @@ class AuthManager @Inject() (
             userService
               .findUserById(userId)
               .recoverWith { case e: ServiceException => Future.failed(e) }
-          case _ => Future.failed(AuthManager.Exceptions.InternalError()) // TODO 
+          case _ =>
+            Future.failed(AuthManager.Exceptions.InternalError()) // TODO
         }
       case _ => Future.failed(AuthManager.Exceptions.InternalError())
     }

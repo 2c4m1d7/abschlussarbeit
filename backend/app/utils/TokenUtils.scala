@@ -69,7 +69,6 @@ class TokenUtils @Inject() (configuration: Configuration) {
   }
 
   def getJwtClaims(token: String): Option[JwtClaim] = {
-    println(token)
     Jwt.decode(token, SECRET_KEY, Seq(hmacAlgorithm)).toOption
   }
 
