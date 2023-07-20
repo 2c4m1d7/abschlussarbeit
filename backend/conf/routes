@@ -6,7 +6,7 @@
 #auth
 
 POST /signin                                    controllers.AuthController.signIn()
-
+POST /token/refresh                             controllers.AuthController.refreshToken()
 
 
 DELETE /redis/delete/:dbName                       controllers.RedisController.deleteDB(dbName : String)
@@ -15,7 +15,7 @@ POST /redis/database                                        controllers.RedisCon
 GET /redis/exists/:dbName                           controllers.RedisController.exists(dbName:String)
 
 
-POST /user                                      controllers.UserController.addUser()
+GET /user                                      controllers.UserController.findUser()
 
 # Map static resources from the /public folder to the /assets URL path
 GET /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

@@ -10,11 +10,17 @@ import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import models.dtos.CredentialsRequest
+import auth.SecuredAction
+import play.api.http.HeaderNames
+import utils.TokenUtils
+import managers.AuthManager
 
 @Singleton
 class UserController @Inject() (
     userService: UserService,
-    cc: ControllerComponents
+    cc: ControllerComponents,
+    secuderAction: SecuredAction,
+    auth: AuthManager
 )(implicit
     executionContext: ExecutionContext
 ) extends AbstractController(cc) {
@@ -36,7 +42,29 @@ class UserController @Inject() (
 
   }
 
+  def findUser() = secuderAction.async {
+    implicit request: Request[AnyContent] =>
 
+      request.headers
+        .get(HeaderNames.AUTHORIZATION)
+        .map(_.split(" ").last) match {
+        case Some(token) =>
+         
+         auth.verifyToken(token) // TODO change logic
+          .map(user => Ok(Json.toJson(user)))
+            .recoverWith {
+              case e: UserService.Exceptions.NotFound =>
+                exceptionToResult(e)
+            }
+        case None =>
+          // Missing authorization header, return unauthorized response
+          exceptionToResult(
+            UserService.Exceptions.InternalError()
+          )
+        // Future.successful(Results.Unauthorized("Missing authorization header"))
+      }
+
+  }
 
   def exceptionToResult(e: RuntimeException): Future[Result] = e match {
     case _: UserService.Exceptions.NotFound =>
@@ -48,4 +76,3 @@ class UserController @Inject() (
   }
 
 }
-

@@ -1,14 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-
-
+import { useDispatch, useSelector } from "react-redux";
+import { login } from "../redux/thunks/loginThunks";
+import { fetchUser } from '../redux/thunks/userThunks';
 
 
 const LoginPage = (props) => {
+  const dispatch = useDispatch();
+  const state = useSelector(state => state);
   const [username, setUsername] = useState('user01');
   const [password, setPassword] = useState('password1');
   const navigate = useNavigate();
+
+  // useEffect(() => {
+  //   if (state.login.isLoggedIn === true) {
+  //     navigate("/overview");
+  //   }f
+  // }, [state]);
   const handleSubmit = (event) => {
+    console.log(state)
+
     event.preventDefault();
     if (username === '' || password === '') {
       return;
@@ -18,48 +29,8 @@ const LoginPage = (props) => {
       username: username,
       password: password
     }
-
-    //  fetch("http://127.0.0.1:9000/v1/auth/signin", {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    //   body: JSON.stringify(payload),
-    // }).then(response => {
-    //   console.log(response)
-    //   return response.json()
-    // }).then(data => {
-    //   localStorage.setItem('accsessToken', data.accessToken)
-    //   localStorage.setItem('refreshToken', data.refreshToken)
-    //   console.log(props)
-    //   props.setIsLoggedIn(true)
-    //   navigate("/overview");
-    // })
-
-    fetch("http://127.0.0.1:9000/", {
-      method: "POST",
-      credentials: 'same-origin',
-      headers: {
-        Accept: 'application/json',
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload)
-    })
-    .then(response => {
-      return response.json()
-    }).then(data => {
-      console.log(data)
-      // localStorage.setItem('accsessToken', data.accessToken)
-      // localStorage.setItem('refreshToken', data.refreshToken)
-      // console.log(props)
-      // props.setIsLoggedIn(true)
-      // navigate("/overview");
-    }).catch(error => {
-      console.log(error)
-    })
-
-
-
+    dispatch(login(payload))
+    .then(x => dispatch(fetchUser))
   }
 
   return (
