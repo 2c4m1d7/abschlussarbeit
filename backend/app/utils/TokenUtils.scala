@@ -59,7 +59,7 @@ class TokenUtils @Inject() (configuration: Configuration) {
               generateToken(
                 AccessTokenContent(userId),
                 currentTimestamp,
-                refreshExpirationTime
+                accessExpirationTime
               )
             )
           case _ => None
@@ -69,6 +69,10 @@ class TokenUtils @Inject() (configuration: Configuration) {
   }
 
   def getJwtClaims(token: String): Option[JwtClaim] = {
+    // Jwt.decode(token, SECRET_KEY, Seq(hmacAlgorithm)) match {
+    //   case Failure(exception) => println(exception.getMessage())
+    //   case Success(claim) => println(claim.content)
+    // }
     Jwt.decode(token, SECRET_KEY, Seq(hmacAlgorithm)).toOption
   }
 

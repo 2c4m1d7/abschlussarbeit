@@ -24,7 +24,7 @@ class AuthManager @Inject() (
     userService: UserService,
     ldapService: LdapService,
     tokenUtils: TokenUtils,
-    logger: Logger
+    // logger: Logger
 )(implicit
     ec: ExecutionContext
 ) {
@@ -49,7 +49,7 @@ class AuthManager @Inject() (
   }
 
   def serviceErrorMapper(exception: ServiceException): Future[Nothing] = {
-    logger.error(exception.getMessage)
+    // logger.error(exception.getMessage)
     exception match {
       case e: LdapService.Exceptions.AccessDenied =>
         Future.failed(AuthManager.Exceptions.AccessDenied(e.getMessage))
@@ -62,7 +62,7 @@ class AuthManager @Inject() (
     }
   }
   private def internalError(errorMessage: String): Future[Nothing] = {
-    logger.error(errorMessage)
+    // logger.error(errorMessage)
     Future.failed(AuthManager.Exceptions.InternalError(errorMessage))
   }
 

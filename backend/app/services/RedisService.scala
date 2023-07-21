@@ -23,10 +23,18 @@ import java.nio.file.FileVisitResult
 import utils.FileUtils
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.UUID
+import models.dtos.DatabaseResponse
+import repositories.DatabaseRepository
+import models.dtos.DatabaseListResponse
+import models.DatabaseRow
+import models.dtos.DatabaseListInfo
 
 class RedisService @Inject() (implicit
     configuration: Configuration,
-    system: ActorSystem
+    databaseRepository: DatabaseRepository,
+    system: ActorSystem,
+    ec: ExecutionContext
 ) {
   val redisHost = configuration.get[String]("redis_host")
   val redisDirPath = configuration.get[String]("redis_directory")
@@ -34,8 +42,8 @@ class RedisService @Inject() (implicit
   var redisInstances: Map[String, Redis] = Map()
   val log = LoggerFactory.getLogger(this.getClass());
 
-  def create(dbName: String): Future[Int] = {
-    val dbPath = redisDirPath + "/" + dbName
+  def create(dbRow: DatabaseRow): Future[Int] = {
+    val dbPath = redisDirPath + "/" + dbRow.name
 
     val redisDir = new File(redisDirPath)
     redisDir.mkdir()
@@ -43,7 +51,9 @@ class RedisService @Inject() (implicit
     val db = new File(dbPath)
     db.mkdir()
 
-    return start(dbName);
+    databaseRepository.addDatabase(dbRow)
+
+    return start(dbRow.name);
   }
 
   def start(dbName: String): Future[Int] = {
@@ -62,7 +72,9 @@ class RedisService @Inject() (implicit
         .getOrElse(-1)
 
       if (redisPort == -1) {
-        return Future.failed(new RuntimeException("Redis port not found")); // TODO: handle this
+        return Future.failed(
+          new RuntimeException("Redis port not found")
+        ); // TODO: handle this
       }
       val startRedis =
         s"bash ./sh/start_redis.sh $redisPort $dbPath $dbName"
@@ -101,6 +113,53 @@ class RedisService @Inject() (implicit
   def dbExists(name: String): Boolean = {
     val directory = new File(redisDirPath)
     directory.listFiles.exists(_.getName.equals(name))
+  }
+
+  def getDb(id: UUID): Future[DatabaseResponse] = {
+
+    databaseRepository
+      .getDatabaseById(id)
+      .recoverWith { case t => Future.failed(t) }
+      .flatMap {
+        case Some(db) =>
+          if (redisInstances.contains(db.name)) {
+             Future.successful(
+              DatabaseResponse(
+                id = db.id,
+                name = db.name,
+                port = redisInstances(db.name).port,
+                createdAt = db.createdAt
+              )
+            )
+          } else {
+            start(db.name)
+              .map(port =>
+                DatabaseResponse(
+                  id = db.id,
+                  name = db.name,
+                  port = port,
+                  createdAt = db.createdAt
+                )
+              )
+          }
+
+        case None =>
+          Future.failed(
+            UserService.Exceptions
+              .NotFound(s"There is no database with id: ${id.toString()}")
+          )
+      }
+
+  }
+
+  def getDatabaseByUserId(userId: UUID): Future[DatabaseListResponse] = {
+    databaseRepository
+      .getDatabasesByUserId(userId)
+      .map(dbs => {
+        DatabaseListResponse(
+          databases = dbs.map(db => DatabaseListInfo(db.id, db.name))
+        )
+      })
   }
 
   Runtime.getRuntime.addShutdownHook(
