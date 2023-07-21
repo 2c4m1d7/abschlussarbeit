@@ -8,21 +8,40 @@ import { IoMdAddCircleOutline } from 'react-icons/io';
 import DatabaseRow from '../components/DatabaseRow';
 import { logout } from '../redux/slices/userSlice';
 import { useNavigate } from 'react-router-dom';
+import secureApi from '../api/secureApi';
 function MainPage() {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const { loading, user } = useSelector(state => state.login);
-    const [databases, setDatabases] = useState([
-        'Database 1',
-        'Database 2',
-        'Database 3',
-        // ... add your initial databases here
-    ]);
+    const [databases, setDatabases] = useState([]);
     const [selectedDatabases, setSelectedDatabases] = useState([]);
 
+    useEffect(() => {
+        secureApi.get('databases')
+            .then(response => {
+                console.log(response.data.databases)
+                setDatabases(response.data.databases)
+            })
+            .catch(error => {
+                console.log(error)
+            })
+    }, [])
+
+
     const addDatabase = () => {
-        dispatch(fetchUser())
-            .then(x => console.log(user))
+        secureApi.post('/redis/database?dbName=testDb')
+            .then(response => {
+                secureApi.get('databases')
+                    .then(response => {
+                        setDatabases(response.data.databases)
+                    })
+                    .catch(error => {
+                        console.log(error)
+                    })
+            })
+            .catch(error => {
+                console.log(error)
+            })
 
     };
 
@@ -36,7 +55,7 @@ function MainPage() {
     const handleRowClick = (db) => {
         console.log(db);
         navigate(`/database/${db.id}`);
-      }
+    }
     const handleRemoveDatabases = () => { // This function will handle the deleting of selected databases.
         setDatabases(databases.filter((_, index) => !selectedDatabases.includes(index)));
         setSelectedDatabases([]); //Clear Selected databases array.
@@ -59,7 +78,7 @@ function MainPage() {
                 </section>
 
                 <section className="my-4">
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg mb-4">
+                    <button onClick={addDatabase} className="px-4 py-2 bg-blue-600 text-white rounded-lg mb-4">
                         <IoMdAddCircleOutline className="inline-block mr-2" /> Add Database
                     </button>
 
@@ -71,7 +90,6 @@ function MainPage() {
                         {databases.map((db, index) => (
                             <DatabaseRow
                                 db={db}
-                                index={index}
                                 handleDatabaseSelection={handleDatabaseSelection}
                                 isSelected={selectedDatabases.includes(index)}
                                 onClick={() => handleRowClick(db)}

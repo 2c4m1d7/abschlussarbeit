@@ -7,8 +7,8 @@ import { logout } from '../redux/slices/userSlice';
 
 const DatabaseDetails = () => {
     const dispatch = useDispatch();
-    const { id } = useParams(); // get id from route
-    const [db, setDb] = useState()// implement this yourself
+    const { id } = useParams(); 
+    const [db, setDb] = useState()
 
     useEffect(() => {
         secureApi.get(`database/${id}`)
@@ -17,9 +17,6 @@ const DatabaseDetails = () => {
             })
             .catch(error => {
                 console.log(error)
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                dispatch(logout())
             })
     }, [])
 

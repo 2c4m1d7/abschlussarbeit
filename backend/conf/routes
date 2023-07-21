@@ -13,7 +13,8 @@ DELETE /redis/delete/:dbName                       controllers.RedisController.d
 POST /redis/database                                        controllers.RedisController.addDB(dbName: String)
 
 GET /redis/exists/:dbName                           controllers.RedisController.exists(dbName:String)
-
+GET /database/:id                                controllers.RedisController.getDbDetails(id: String)
+GET /databases                                   controllers.RedisController.getDatabases()
 
 GET /user                                      controllers.UserController.findUser()
 

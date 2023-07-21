@@ -5,54 +5,52 @@ import play.api.db.slick.DatabaseConfigProvider
 import scala.concurrent.ExecutionContext
 import play.api.db.slick.HasDatabaseConfigProvider
 import slick.jdbc.JdbcProfile
-import models.Instance
+import models.DatabaseRow
 import java.util.UUID
 import java.sql.Timestamp
 import slick.sql.SqlProfile
 import scala.concurrent.Future
 
 @Singleton
-class InstanceRepository @Inject() (
+class DatabaseRepository @Inject() (
     protected val dbConfigProvider: DatabaseConfigProvider
 )(implicit
     ec: ExecutionContext
 ) extends HasDatabaseConfigProvider[JdbcProfile] {
 
   import profile.api._
-  private val instances = TableQuery[InstanceTable]
+  private val databases = TableQuery[DatabaseTable]
 
- def getAllInstances: Future[Seq[Instance]] =
-    dbConfig.db.run(instances.result)
+  def getAllDatabases: Future[Seq[DatabaseRow]] =
+    dbConfig.db.run(databases.result)
 
-  def getInstancesByUserId(userId: UUID): Future[Seq[Instance]] =
+  def getDatabasesByUserId(userId: UUID): Future[Seq[DatabaseRow]] =
     dbConfig.db.run(
-      instances.filter(_.userId === userId).result
+      databases.filter(_.userId === userId).result
     )
 
-  def getInstancesByName(name: String): Future[Seq[Instance]] =
+  def getDatabasesByName(name: String): Future[Seq[DatabaseRow]] =
     dbConfig.db.run(
-      instances.filter(_.name === name).result
+      databases.filter(_.name === name).result
     )
 
-  def getInstanceById(instanceId: UUID): Future[Option[Instance]] =
+  def getDatabaseById(databaseId: UUID): Future[Option[DatabaseRow]] = {
     dbConfig.db.run(
-      instances.filter(_.id === instanceId).result.headOption
+      databases.filter(_.id === databaseId).result.headOption
+    )
+  }
+  def addDatabase(database: DatabaseRow): Future[UUID] =
+    dbConfig.db.run(
+      databases.returning(databases.map(_.id)) += database
     )
 
-  def addInstance(instance: Instance): Future[UUID] =
+  def deleteDatabaseById(databaseId: UUID): Future[Int] =
     dbConfig.db.run(
-      instances.returning(instances.map(_.id)) += instance
+      databases.filter(_.id === databaseId).delete
     )
 
-  def deleteInstanceById(instanceId: UUID): Future[Int] =
-    dbConfig.db.run(
-      instances.filter(_.id === instanceId).delete
-    )
-
-
-
-  private class InstanceTable(tag: Tag)
-      extends Table[Instance](tag, "instances") {
+  private class DatabaseTable(tag: Tag)
+      extends Table[DatabaseRow](tag, "databases") {
 
     def id = column[UUID]("id", O.PrimaryKey)
     def userId = column[UUID]("user_id")
@@ -69,6 +67,6 @@ class InstanceRepository @Inject() (
       userId,
       name,
       createdAt
-    ) <> ((Instance.apply _).tupled, Instance.unapply)
+    ) <> ((DatabaseRow.apply _).tupled, DatabaseRow.unapply)
   }
 }

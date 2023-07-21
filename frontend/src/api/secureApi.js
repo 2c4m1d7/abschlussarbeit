@@ -34,8 +34,7 @@ secureApi.interceptors.response.use((response) => {
             localStorage.setItem('accessToken', accessToken);
             return secureApi(originalRequest);
         } catch (ex) {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
+            return Promise.reject(ex);
         }
     }
     return Promise.reject(error);

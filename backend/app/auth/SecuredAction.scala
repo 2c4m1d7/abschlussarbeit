@@ -16,18 +16,26 @@ import play.api.mvc.Results.BadRequest
 import javax.inject.Inject
 import play.api.mvc.BodyParsers
 import play.api.Logging
+import models.User
+import play.api.mvc.WrappedRequest
+import play.api.mvc.ActionBuilder
+import play.api.mvc.ActionTransformer
+
+class UserRequest[A](val user: User, val request: Request[A])
+    extends WrappedRequest[A](request)
 
 class SecuredAction @Inject() (
     parser: BodyParsers.Default,
     authManager: AuthManager
 )(implicit
     val ec: ExecutionContext
-) extends ActionBuilderImpl(parser)  with Logging  {
+) extends ActionBuilder[UserRequest, AnyContent]
+    with ActionTransformer[Request, UserRequest]
+    with Logging {
 
-  override def invokeBlock[A](
-      request: Request[A],
-      block: Request[A] => Future[Result]
-  ): Future[Result] = {
+  override protected def transform[A](
+      request: Request[A]
+  ): Future[UserRequest[A]] = {
     val maybeToken =
       request.headers.get(HeaderNames.AUTHORIZATION).map(_.split(" ").last)
 
@@ -35,19 +43,41 @@ class SecuredAction @Inject() (
       case Some(token) =>
         authManager
           .verifyToken(token)
-          .flatMap(user => block(request))
-          .recoverWith {
-            case e: SecuredAction.Exceptions.SecuredActionException =>
-              exceptionToResult(e)
-          }
+          .map(user => new UserRequest(user, request))
       case None =>
-        // Missing authorization header, return unauthorized response
-        exceptionToResult(
-          SecuredAction.Exceptions.InvalidAccessTokenRejection()
-        )
-      // Future.successful(Results.Unauthorized("Missing authorization header"))
+        Future.failed(SecuredAction.Exceptions.InvalidAccessTokenRejection())
+
     }
   }
+
+  override protected def executionContext: ExecutionContext = ec
+
+  override def parser: BodyParser[AnyContent] = this.parser
+
+  // override def invokeBlock[A](
+  //     request: Request[A],
+  //     block: Request[A] => Future[Result]
+  // ): Future[Result] = {
+  //   val maybeToken =
+  //     request.headers.get(HeaderNames.AUTHORIZATION).map(_.split(" ").last)
+
+  //   maybeToken match {
+  //     case Some(token) =>
+  //       authManager
+  //         .verifyToken(token)
+  //         .flatMap(user => block(request))
+  //         .recoverWith {
+  //           case e: SecuredAction.Exceptions.SecuredActionException =>
+  //             exceptionToResult(e)
+  //         }
+  //     case None =>
+  //       // Missing authorization header, return unauthorized response
+  //       exceptionToResult(
+  //         SecuredAction.Exceptions.InvalidAccessTokenRejection()
+  //       )
+  //     // Future.successful(Results.Unauthorized("Missing authorization header"))
+  //   }
+  // }
 
   def exceptionToResult(
       error: SecuredAction.Exceptions.SecuredActionException
