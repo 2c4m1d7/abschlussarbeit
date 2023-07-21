@@ -3,11 +3,11 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, } from "react-router-dom";
 
 import LoginPage from './views/LoginPage';
-import Databases from './views/Databases';
-import DatabaseOverview from './views/DatabaseOverview';
+import MainPage from './views/MainPage';
 import { useDispatch, useSelector } from "react-redux";
-import { loginSuccess } from "./redux/slices/loginSlice";
+import { loginSuccess } from "./redux/slices/userSlice";
 import { fetchUser } from './redux/thunks/userThunks';
+import DatabaseDetails from './views/DatabaseDetails';
 
 const App = () => {
   const { isLoggedIn } = useSelector(state => state.login);
@@ -15,6 +15,7 @@ const App = () => {
 
   useEffect(() => {
     dispatch(fetchUser())
+      .then(dispatch(loginSuccess()))
       .catch(error => console.log(error))
   }, [dispatch]);
 
@@ -23,7 +24,8 @@ const App = () => {
       <Routes>
         <Route path="/" element={isLoggedIn ? <Navigate to="/overview" /> : <Navigate to="/login" />} />
         <Route path="/login" element={isLoggedIn ? <Navigate to="/overview" /> : <LoginPage />} />
-        <Route path="/overview" element={isLoggedIn ? <DatabaseOverview /> : <Navigate to="/login" />} />
+        <Route path="/overview" element={isLoggedIn ? <MainPage /> : <Navigate to="/login" />} />
+        <Route path="/database/:id" element={isLoggedIn ? <DatabaseDetails /> : <Navigate to="/login" />} />
       </Routes>
     </Router>
   );

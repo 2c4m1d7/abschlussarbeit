@@ -1,5 +1,4 @@
-import { loginSuccess, requestLogin, logout } from "../slices/loginSlice"
-import Client from "../../api/Client"
+import { loginSuccess, requestLogin, logout } from "../slices/userSlice"
 import jwt_decode from "jwt-decode";
 import { fetchUser } from "./userThunks";
 import unsecuredApi from "../../api/unsecuredApi";
@@ -15,7 +14,8 @@ export const login =
         localStorage.setItem('refreshToken', tokens.refreshToken)
 
         dispatch(fetchUser())
-        .catch(error => console.log(error))
+            .then(dispatch(loginSuccess()))
+            .catch(error => console.log(error))
 
     }
 
@@ -24,9 +24,9 @@ export const refreshAccessToken =
     () => async (dispatch, getState) => {
 
         dispatch(requestLogin())
-        let accessToken = localStorage.getItem('accessToken')
+
         let refreshToken = localStorage.getItem('refreshToken')
-        if (accessToken === null && refreshToken === null) {
+        if (refreshToken === null) {
             dispatch(logout())
             return
         }
@@ -40,11 +40,11 @@ export const refreshAccessToken =
             return
         }
 
-        const newAccessToken =  (await unsecuredApi.post('token/refresh', { refreshToken: refreshToken })).data
+        const newAccessToken = (await unsecuredApi.post('token/refresh', { refreshToken: refreshToken })).data
         localStorage.setItem('accessToken', newAccessToken)
         dispatch(fetchUser())
-        // .then(x => dispatch(loginSuccess()))
-        .catch(error => console.log(error))
+            // .then(x => dispatch(loginSuccess()))
+            .catch(error => console.log(error))
 
     }
 
