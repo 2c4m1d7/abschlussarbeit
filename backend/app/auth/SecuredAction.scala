@@ -20,6 +20,7 @@ import models.User
 import play.api.mvc.WrappedRequest
 import play.api.mvc.ActionBuilder
 import play.api.mvc.ActionTransformer
+import play.api.mvc.ActionRefiner
 
 class UserRequest[A](val user: User, val request: Request[A])
     extends WrappedRequest[A](request)
@@ -30,12 +31,12 @@ class SecuredAction @Inject() (
 )(implicit
     val ec: ExecutionContext
 ) extends ActionBuilder[UserRequest, AnyContent]
-    with ActionTransformer[Request, UserRequest]
-    with Logging {
+    with ActionRefiner[Request, UserRequest] 
+    with Logging{
 
-  override protected def transform[A](
+  override protected def refine[A](
       request: Request[A]
-  ): Future[UserRequest[A]] = {
+  ): Future[Either[Result, UserRequest[A]]] = {
     val maybeToken =
       request.headers.get(HeaderNames.AUTHORIZATION).map(_.split(" ").last)
 
@@ -43,10 +44,10 @@ class SecuredAction @Inject() (
       case Some(token) =>
         authManager
           .verifyToken(token)
-          .map(user => new UserRequest(user, request))
+          .map(user => Right(new UserRequest(user, request)))
+          .recover { case _ => Left(Results.Unauthorized("Invalid access token")) }
       case None =>
-        Future.failed(SecuredAction.Exceptions.InvalidAccessTokenRejection())
-
+        Future.successful(Left(Results.Unauthorized("Access token is missing")))
     }
   }
 

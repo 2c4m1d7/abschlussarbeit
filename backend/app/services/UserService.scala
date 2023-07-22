@@ -12,13 +12,13 @@ import scala.util.Success
 import scala.util.Failure
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import play.api.Logging
 
 @Singleton
 class UserService @Inject() (
     userRepository: UserRepository
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext) extends Logging {
 
-  val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   def findUserById(userId: UUID): Future[User] =
     userRepository

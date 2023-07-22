@@ -59,7 +59,6 @@ class RedisService @Inject() (implicit
       return Future.failed(new RuntimeException("Database already exists"))
     }
 
-
     val dbPath = redisDirPath + "/" + dbRow.name
 
     val redisDir = new File(redisDirPath)
@@ -119,10 +118,16 @@ class RedisService @Inject() (implicit
   ): Future[Unit] = {
     redisInstances.foreach({ case (id, instance) =>
       if (databaseIds.contains(id)) {
-        // s"redis-cli -h ${instance.host} -p ${instance.port} shutdown".!
-        instance.shutdown()
+        instance
+          .shutdown()
+          .recover({
+            case _ => {
+              s"redis-cli -h ${instance.host} -p ${instance.port} shutdown".!
+            }
+          })
       }
     })
+
     redisInstances = redisInstances.removedAll(databaseIds)
 
     databaseRepository
@@ -145,7 +150,7 @@ class RedisService @Inject() (implicit
     directory.listFiles.exists(_.getName.equals(name))
   }
 
-  def getDb(dbId: UUID, userId : UUID): Future[DatabaseResponse] = {
+  def getDb(dbId: UUID, userId: UUID): Future[DatabaseResponse] = {
 
     databaseRepository
       .getDatabaseByIdAndUserId(dbId, userId)
@@ -176,7 +181,9 @@ class RedisService @Inject() (implicit
         case None =>
           Future.failed(
             UserService.Exceptions
-              .NotFound(s"There is no database with id: ${dbId.toString()} for user: ${userId.toString()}")
+              .NotFound(
+                s"There is no database with id: ${dbId.toString()} for user: ${userId.toString()}"
+              )
           )
       }
 
