@@ -25,9 +25,16 @@ class RedisController @Inject() (
 
   def addDB(dbName: String) = secuderAction.async {
     implicit request: UserRequest[AnyContent] =>
-
       redisService
-        .create(DatabaseRow(UUID.randomUUID(), request.user.id, dbName, new Timestamp(System.currentTimeMillis())), request.user.id)
+        .create(
+          DatabaseRow(
+            UUID.randomUUID(),
+            request.user.id,
+            dbName,
+            new Timestamp(System.currentTimeMillis())
+          ),
+          request.user.id
+        )
         .map(port => Ok(Json.toJson(port)))
         .recoverWith({ case _ => Future.successful(InternalServerError) })
   }
@@ -40,24 +47,25 @@ class RedisController @Inject() (
 
   def deleteDBs() = secuderAction.async {
     implicit request: UserRequest[AnyContent] =>
-
       val databaseIds = request.request.body.asJson.get.as[Seq[UUID]]
-      redisService.deleteDatabasesByIdsIn(databaseIds, request.user.id)
-      Future.successful(Ok(""))
+      redisService
+        .deleteDatabasesByIds(databaseIds, request.user.id)
+        .map(_ => Ok(""))
+
   }
 
-  def exists(dbName: String) = secuderAction.async { implicit request: UserRequest[AnyContent] =>
-     Future.successful(Ok(Json.toJson(redisService.dbExists(dbName))))
+  def exists(dbName: String) = secuderAction.async {
+    implicit request: UserRequest[AnyContent] =>
+      Future.successful(Ok(Json.toJson(redisService.dbExists(dbName))))
   }
 
   def getDbDetails(id: String) = secuderAction.async {
     implicit request: UserRequest[AnyContent] =>
-
       val databaseId = UUID.fromString(id)
       redisService
         .getDb(databaseId)
         .map(db => Ok(Json.toJson(db)))
-        .recoverWith({ case e => Future.successful(Ok(Json.toJson(e.getMessage()))) })
+        .recoverWith({ case e => Future.failed(e) })
   }
 
   def getDatabases() = secuderAction.async {

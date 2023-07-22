@@ -30,6 +30,7 @@ import models.dtos.DatabaseListResponse
 import models.DatabaseRow
 import models.dtos.DatabaseListInfo
 import scala.util.Success
+import scala.util.Failure
 
 class RedisService @Inject() (implicit
     configuration: Configuration,
@@ -43,17 +44,21 @@ class RedisService @Inject() (implicit
   val log = LoggerFactory.getLogger(this.getClass());
 
   def create(dbRow: DatabaseRow, userId: UUID): Future[Int] = {
-    val existsDb = Await.result(
-      databaseRepository.getDatabaseByNameAndUserId(dbRow.name, userId),
+    val existingDb = Await.result(
+      // databaseRepository.getDatabaseByNameAndUserId(dbRow.name, userId)
+      databaseRepository.getDatabaseByName(dbRow.name),
       Duration.Inf
     ) match {
       case Some(db) => db
       case None     => null
     }
 
-    if (existsDb != null) {
-      return start(existsDb)
+    if (existingDb != null && existingDb.userId == userId) {
+      return start(existingDb)
+    } else if (existingDb != null) {
+      return Future.failed(new RuntimeException("Database already exists"))
     }
+
     val dbPath = redisDirPath + "/" + dbRow.name
 
     val redisDir = new File(redisDirPath)
@@ -103,14 +108,14 @@ class RedisService @Inject() (implicit
     )
 
     redisInstances = redisInstances + ((db.id, redisInstance))
-
     new Thread(new RedisInstanceManager(redisInstance)).start()
-
     return Future.successful(redisPort);
   }
 
-  def deleteDatabasesByIdsIn(databaseIds: Seq[UUID], userId: UUID) = {
-
+  def deleteDatabasesByIds(
+      databaseIds: Seq[UUID],
+      userId: UUID
+  ): Future[Unit] = {
     redisInstances.foreach({ case (id, instance) =>
       if (databaseIds.contains(id)) {
         // s"redis-cli -h ${instance.host} -p ${instance.port} shutdown".!
@@ -119,18 +124,19 @@ class RedisService @Inject() (implicit
     })
     redisInstances = redisInstances.removedAll(databaseIds)
 
-    Await
-      .result(
-        databaseRepository
-          .getDatabaseByIdsIn(databaseIds, userId),
-        Duration.Inf
-      )
-      .foreach(db => {
-        val directoryPath = Path.of(redisDirPath, db.name)
-        FileUtils.deleteDir(directoryPath)
-      })
-
-    databaseRepository.deleteDatabaseByIdsIn(databaseIds, userId)
+    databaseRepository
+      .getDatabaseByIdsIn(databaseIds, userId)
+      .andThen {
+        case Success(dbs) => {
+          dbs.foreach(db => {
+            val directoryPath = Path.of(redisDirPath, db.name)
+            FileUtils.deleteDir(directoryPath)
+          })
+          databaseRepository.deleteDatabaseByIdsIn(databaseIds, userId)
+        }
+        case Failure(exception) => Future.failed(exception)
+      }
+      .collect({ case _ => () })
   }
 
   def dbExists(name: String): Boolean = {

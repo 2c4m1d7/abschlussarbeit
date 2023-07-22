@@ -9,6 +9,7 @@ import DatabaseRow from '../components/DatabaseRow';
 import { logout } from '../redux/slices/userSlice';
 import { useNavigate } from 'react-router-dom';
 import secureApi from '../api/secureApi';
+import Header from '../components/Header';
 function MainPage() {
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -63,14 +64,7 @@ function MainPage() {
     }
     return (
         <div className="h-screen bg-gray-100 flex items-center justify-center">
-            <header className="flex items-center justify-end w-full fixed top-0 px-10 py-7">
-                <AiOutlineUser size={30} onClick={() => { console.log(user) }} className='cursor-pointer text-blue-600 mr-4' />
-                <MdLogout size={30} onClick={() => {
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
-                    dispatch(logout())
-                }} className='cursor-pointer text-blue-600' />
-            </header>
+            <Header />
 
             <main className="mx-auto max-w-lg bg-white p-8 mt-7 rounded-xl shadow-md">
                 <section className="flex items-center space-x-4 mb-7">
@@ -84,7 +78,7 @@ function MainPage() {
                     </button>
 
                     <button onClick={handleRemoveDatabases} disabled={selectedDatabases.length === 0} className="px-4 py-2 bg-red-600 text-white rounded-lg mb-4 ml-4"> {/* This is the new remove databases button */}
-                        <MdDelete className="inline-block mr-2" /> Remove Databases
+                        <MdDelete className="inline-block mr-2" /> Remove
                     </button>
 
                     <div className="space-y-2">

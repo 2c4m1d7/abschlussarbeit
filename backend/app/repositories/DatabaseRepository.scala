@@ -45,6 +45,13 @@ class DatabaseRepository @Inject() (
       databases.filter(_.id === databaseId).result.headOption
     )
   }
+
+ def getDatabaseByName(name : String): Future[Option[DatabaseRow]] = 
+   dbConfig.db.run(
+     databases.filter(_.name === name).result.headOption
+   )
+ 
+
   def addDatabase(database: DatabaseRow): Future[UUID] =
     dbConfig.db.run(
       databases.returning(databases.map(_.id)) += database
