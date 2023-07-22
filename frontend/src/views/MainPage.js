@@ -49,13 +49,13 @@ function MainPage() {
         }
     };
     const handleRowClick = (db) => {
-        console.log(db);
         navigate(`/database/${db.id}`);
     }
     const handleRemoveDatabases = () => {
-        console.log(selectedDatabases)
+
         secureApi.delete('redis/delete-batch', { data: selectedDatabases })
             .then(response => {
+                setSelectedDatabases([]);
                 fetchDbs()
             })
             .catch(error => {
@@ -68,7 +68,7 @@ function MainPage() {
 
             <main className="mx-auto max-w-lg bg-white p-8 mt-7 rounded-xl shadow-md">
                 <section className="flex items-center space-x-4 mb-7">
-                    <h1 className="text-gray-800 text-xl font-semibold">Databases</h1>
+                    <h1 className="text-gray-800 text-xl font-semibold">Redis Databases</h1>
                     <FaDatabase size={38} className="text-blue-600" />
                 </section>
 

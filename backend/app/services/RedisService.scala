@@ -37,7 +37,7 @@ class RedisService @Inject() (implicit
     databaseRepository: DatabaseRepository,
     system: ActorSystem,
     ec: ExecutionContext
-) {
+){
   val redisHost = configuration.get[String]("redis_host")
   val redisDirPath = configuration.get[String]("redis_directory")
   var redisInstances: Map[UUID, Redis] = Map()
@@ -121,7 +121,8 @@ class RedisService @Inject() (implicit
         instance
           .shutdown()
           .recover({
-            case _ => {
+            case e => {
+              log.warn(e.getMessage(), e)
               s"redis-cli -h ${instance.host} -p ${instance.port} shutdown".!
             }
           })
