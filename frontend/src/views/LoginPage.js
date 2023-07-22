@@ -32,7 +32,7 @@ const LoginPage = (props) => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-400">
-      <div className="bg-white p-16 rounded-lg shadow-2xl w-1/4">
+      <div className="bg-white p-16 rounded-lg shadow-2xl max-w-lg mx-auto ">
         <h2 className="text-3xl font-bold mb-10 text-gray-800">Login</h2>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="flex flex-col">

@@ -16,7 +16,9 @@ const App = () => {
   useEffect(() => {
     dispatch(fetchUser())
       .then(dispatch(loginSuccess()))
-      .catch(error => console.log(error))
+      .catch(error => {
+        console.log(error)
+      })
   }, [dispatch]);
 
   return (

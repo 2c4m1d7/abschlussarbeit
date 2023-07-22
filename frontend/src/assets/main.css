@@ -516,6 +516,9 @@ video {
 .mt-7 {
   margin-top: 1.75rem;
 }
+.mb-44 {
+  margin-bottom: 11rem;
+}
 .inline-block {
   display: inline-block;
 }
@@ -542,6 +545,15 @@ video {
 }
 .max-w-lg {
   max-width: 32rem;
+}
+.max-w-xl {
+  max-width: 36rem;
+}
+.max-w-2xl {
+  max-width: 42rem;
+}
+.max-w-7xl {
+  max-width: 80rem;
 }
 .cursor-pointer {
   cursor: pointer;
@@ -577,6 +589,11 @@ video {
   --tw-space-y-reverse: 0;
   margin-top: calc(1.25rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(1.25rem * var(--tw-space-y-reverse));
+}
+.space-y-9 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(2.25rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(2.25rem * var(--tw-space-y-reverse));
 }
 .rounded-lg {
   border-radius: 0.5rem;

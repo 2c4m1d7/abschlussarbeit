@@ -15,29 +15,24 @@ function MainPage() {
     const { loading, user } = useSelector(state => state.login);
     const [databases, setDatabases] = useState([]);
     const [selectedDatabases, setSelectedDatabases] = useState([]);
-
-    useEffect(() => {
+    const fetchDbs = () => {
         secureApi.get('databases')
             .then(response => {
-                console.log(response.data.databases)
                 setDatabases(response.data.databases)
             })
             .catch(error => {
                 console.log(error)
             })
+    }
+    useEffect(() => {
+        fetchDbs()
     }, [])
 
 
     const addDatabase = () => {
         secureApi.post('/redis/database?dbName=testDb')
             .then(response => {
-                secureApi.get('databases')
-                    .then(response => {
-                        setDatabases(response.data.databases)
-                    })
-                    .catch(error => {
-                        console.log(error)
-                    })
+                fetchDbs()
             })
             .catch(error => {
                 console.log(error)
@@ -56,9 +51,15 @@ function MainPage() {
         console.log(db);
         navigate(`/database/${db.id}`);
     }
-    const handleRemoveDatabases = () => { // This function will handle the deleting of selected databases.
-        setDatabases(databases.filter((_, index) => !selectedDatabases.includes(index)));
-        setSelectedDatabases([]); //Clear Selected databases array.
+    const handleRemoveDatabases = () => {
+        console.log(selectedDatabases)
+        secureApi.delete('redis/delete-batch', { data: selectedDatabases })
+            .then(response => {
+                fetchDbs()
+            })
+            .catch(error => {
+                console.log(error)
+            })
     }
     return (
         <div className="h-screen bg-gray-100 flex items-center justify-center">
@@ -91,7 +92,7 @@ function MainPage() {
                             <DatabaseRow
                                 db={db}
                                 handleDatabaseSelection={handleDatabaseSelection}
-                                isSelected={selectedDatabases.includes(index)}
+                                isSelected={selectedDatabases.includes(db.id)}
                                 onClick={() => handleRowClick(db)}
                             />
                         ))}
@@ -100,6 +101,7 @@ function MainPage() {
             </main>
         </div>
     );
+
 }
 
 

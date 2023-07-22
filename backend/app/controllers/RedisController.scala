@@ -27,14 +27,22 @@ class RedisController @Inject() (
     implicit request: UserRequest[AnyContent] =>
 
       redisService
-        .create(DatabaseRow(UUID.randomUUID(), request.user.id, dbName, new Timestamp(System.currentTimeMillis())))
+        .create(DatabaseRow(UUID.randomUUID(), request.user.id, dbName, new Timestamp(System.currentTimeMillis())), request.user.id)
         .map(port => Ok(Json.toJson(port)))
         .recoverWith({ case _ => Future.successful(InternalServerError) })
   }
 
-  def deleteDB(dbName: String) = secuderAction.async {
+  // def deleteDB(id: String) = secuderAction.async {
+  //   implicit request: UserRequest[AnyContent] =>
+  //     redisService.delete(UUID.fromString(id))
+  //     Future.successful(Ok(""))
+  // }
+
+  def deleteDBs() = secuderAction.async {
     implicit request: UserRequest[AnyContent] =>
-      redisService.delete(dbName)
+
+      val databaseIds = request.request.body.asJson.get.as[Seq[UUID]]
+      redisService.deleteDatabasesByIdsIn(databaseIds, request.user.id)
       Future.successful(Ok(""))
   }
 

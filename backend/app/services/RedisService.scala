@@ -29,6 +29,7 @@ import repositories.DatabaseRepository
 import models.dtos.DatabaseListResponse
 import models.DatabaseRow
 import models.dtos.DatabaseListInfo
+import scala.util.Success
 
 class RedisService @Inject() (implicit
     configuration: Configuration,
@@ -38,11 +39,21 @@ class RedisService @Inject() (implicit
 ) {
   val redisHost = configuration.get[String]("redis_host")
   val redisDirPath = configuration.get[String]("redis_directory")
-
-  var redisInstances: Map[String, Redis] = Map()
+  var redisInstances: Map[UUID, Redis] = Map()
   val log = LoggerFactory.getLogger(this.getClass());
 
-  def create(dbRow: DatabaseRow): Future[Int] = {
+  def create(dbRow: DatabaseRow, userId: UUID): Future[Int] = {
+    val existsDb = Await.result(
+      databaseRepository.getDatabaseByNameAndUserId(dbRow.name, userId),
+      Duration.Inf
+    ) match {
+      case Some(db) => db
+      case None     => null
+    }
+
+    if (existsDb != null) {
+      return start(existsDb)
+    }
     val dbPath = redisDirPath + "/" + dbRow.name
 
     val redisDir = new File(redisDirPath)
@@ -53,14 +64,14 @@ class RedisService @Inject() (implicit
 
     databaseRepository.addDatabase(dbRow)
 
-    return start(dbRow.name);
+    return start(dbRow);
   }
 
-  def start(dbName: String): Future[Int] = {
-    if (redisInstances.contains(dbName)) {
-      return Future.successful(redisInstances(dbName).port)
+  def start(db: DatabaseRow): Future[Int] = {
+    if (redisInstances.contains(db.id)) {
+      return Future.successful(redisInstances(db.id).port)
     }
-    val dbPath = redisDirPath + "/" + dbName
+    val dbPath = redisDirPath + "/" + db.name
 
     var exitCode = 1
     var redisPort = -1
@@ -77,7 +88,7 @@ class RedisService @Inject() (implicit
         ); // TODO: handle this
       }
       val startRedis =
-        s"bash ./sh/start_redis.sh $redisPort $dbPath $dbName"
+        s"bash ./sh/start_redis.sh $redisPort $dbPath ${db.name}"
       val process = startRedis.run()
       exitCode = process.exitValue()
 
@@ -91,23 +102,35 @@ class RedisService @Inject() (implicit
       port = redisPort
     )
 
-    redisInstances = redisInstances + ((dbName, redisInstance))
+    redisInstances = redisInstances + ((db.id, redisInstance))
 
     new Thread(new RedisInstanceManager(redisInstance)).start()
 
     return Future.successful(redisPort);
   }
 
-  def delete(dbName: String): Unit = {
+  def deleteDatabasesByIdsIn(databaseIds: Seq[UUID], userId: UUID) = {
 
-    val instance = redisInstances.getOrElse(dbName, null)
-    if (instance != null) {
-      s"redis-cli -h ${instance.host} -p ${instance.port} shutdown".!
-      redisInstances = redisInstances.removed(dbName)
-    }
+    redisInstances.foreach({ case (id, instance) =>
+      if (databaseIds.contains(id)) {
+        // s"redis-cli -h ${instance.host} -p ${instance.port} shutdown".!
+        instance.shutdown()
+      }
+    })
+    redisInstances = redisInstances.removedAll(databaseIds)
 
-    val directoryPath = Path.of(redisDirPath, dbName)
-    FileUtils.deleteDir(directoryPath)
+    Await
+      .result(
+        databaseRepository
+          .getDatabaseByIdsIn(databaseIds, userId),
+        Duration.Inf
+      )
+      .foreach(db => {
+        val directoryPath = Path.of(redisDirPath, db.name)
+        FileUtils.deleteDir(directoryPath)
+      })
+
+    databaseRepository.deleteDatabaseByIdsIn(databaseIds, userId)
   }
 
   def dbExists(name: String): Boolean = {
@@ -122,17 +145,17 @@ class RedisService @Inject() (implicit
       .recoverWith { case t => Future.failed(t) }
       .flatMap {
         case Some(db) =>
-          if (redisInstances.contains(db.name)) {
-             Future.successful(
+          if (redisInstances.contains(db.id)) {
+            Future.successful(
               DatabaseResponse(
                 id = db.id,
                 name = db.name,
-                port = redisInstances(db.name).port,
+                port = redisInstances(db.id).port,
                 createdAt = db.createdAt
               )
             )
           } else {
-            start(db.name)
+            start(db)
               .map(port =>
                 DatabaseResponse(
                   id = db.id,

@@ -29,9 +29,15 @@ class DatabaseRepository @Inject() (
       databases.filter(_.userId === userId).result
     )
 
-  def getDatabasesByName(name: String): Future[Seq[DatabaseRow]] =
+  def getDatabaseByIdsIn(databaseIds: Seq[UUID], userId: UUID): Future[Seq[DatabaseRow]] =
     dbConfig.db.run(
-      databases.filter(_.name === name).result
+      databases
+        .filter(db => db.id.inSet(databaseIds) && db.userId === userId).result  
+    )
+
+  def getDatabaseByNameAndUserId(name: String, userId: UUID): Future[Option[DatabaseRow]] =
+    dbConfig.db.run(
+      databases.filter(db => db.name === name && db.userId === userId).result.headOption
     )
 
   def getDatabaseById(databaseId: UUID): Future[Option[DatabaseRow]] = {
@@ -47,6 +53,13 @@ class DatabaseRepository @Inject() (
   def deleteDatabaseById(databaseId: UUID): Future[Int] =
     dbConfig.db.run(
       databases.filter(_.id === databaseId).delete
+    )
+
+  def deleteDatabaseByIdsIn(databaseIds: Seq[UUID], userId: UUID): Future[Int] =
+    dbConfig.db.run(
+      databases
+        .filter(db => db.id.inSet(databaseIds) && db.userId === userId)
+        .delete
     )
 
   private class DatabaseTable(tag: Tag)

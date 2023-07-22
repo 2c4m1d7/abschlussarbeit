@@ -77,9 +77,9 @@ class AuthManager @Inject() (
               .findUserById(userId)
               .recoverWith { case e: ServiceException => Future.failed(e) }
           case _ =>
-            Future.failed(AuthManager.Exceptions.InternalError()) // TODO
+            serviceErrorMapper(LdapService.Exceptions.AccessDenied()) // TODO
         }
-      case _ => Future.failed(AuthManager.Exceptions.InternalError())
+      case _ => Future.failed(LdapService.Exceptions.AccessDenied())
     }
   }
 }
