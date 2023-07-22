@@ -10,7 +10,7 @@ import { fetchUser } from './redux/thunks/userThunks';
 import DatabaseDetails from './views/DatabaseDetails';
 
 const App = () => {
-  const { isLoggedIn, loading } = useSelector(state => state.login);
+  const { isLoggedIn, loading, error } = useSelector(state => state.login);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -23,7 +23,6 @@ const App = () => {
   }, [dispatch]);
 
   if (loading) {
-    console.log('loading...');
     return <div>Loading...</div>;
   }
 
