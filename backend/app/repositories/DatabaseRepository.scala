@@ -29,15 +29,25 @@ class DatabaseRepository @Inject() (
       databases.filter(_.userId === userId).result
     )
 
-  def getDatabaseByIdsIn(databaseIds: Seq[UUID], userId: UUID): Future[Seq[DatabaseRow]] =
+  def getDatabaseByIdsIn(
+      databaseIds: Seq[UUID],
+      userId: UUID
+  ): Future[Seq[DatabaseRow]] =
     dbConfig.db.run(
       databases
-        .filter(db => db.id.inSet(databaseIds) && db.userId === userId).result  
+        .filter(db => db.id.inSet(databaseIds) && db.userId === userId)
+        .result
     )
 
-  def getDatabaseByNameAndUserId(name: String, userId: UUID): Future[Option[DatabaseRow]] =
+  def getDatabaseByNameAndUserId(
+      name: String,
+      userId: UUID
+  ): Future[Option[DatabaseRow]] =
     dbConfig.db.run(
-      databases.filter(db => db.name === name && db.userId === userId).result.headOption
+      databases
+        .filter(db => db.name === name && db.userId === userId)
+        .result
+        .headOption
     )
 
   def getDatabaseById(databaseId: UUID): Future[Option[DatabaseRow]] = {
@@ -46,11 +56,16 @@ class DatabaseRepository @Inject() (
     )
   }
 
- def getDatabaseByName(name : String): Future[Option[DatabaseRow]] = 
-   dbConfig.db.run(
-     databases.filter(_.name === name).result.headOption
-   )
- 
+  def getDatabaseByIdAndUserId(databaseId: UUID, userId: UUID): Future[Option[DatabaseRow]] = {
+    dbConfig.db.run(
+      databases.filter(db => db.id === databaseId && db.userId === userId).result.headOption
+    )
+  }
+
+  def getDatabaseByName(name: String): Future[Option[DatabaseRow]] =
+    dbConfig.db.run(
+      databases.filter(_.name === name).result.headOption
+    )
 
   def addDatabase(database: DatabaseRow): Future[UUID] =
     dbConfig.db.run(

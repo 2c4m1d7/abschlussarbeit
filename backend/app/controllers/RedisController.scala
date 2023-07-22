@@ -63,7 +63,7 @@ class RedisController @Inject() (
     implicit request: UserRequest[AnyContent] =>
       val databaseId = UUID.fromString(id)
       redisService
-        .getDb(databaseId)
+        .getDb(databaseId, request.user.id)
         .map(db => Ok(Json.toJson(db)))
         .recoverWith({ case e => Future.failed(e) })
   }

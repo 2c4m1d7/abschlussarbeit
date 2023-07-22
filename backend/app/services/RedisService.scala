@@ -59,6 +59,7 @@ class RedisService @Inject() (implicit
       return Future.failed(new RuntimeException("Database already exists"))
     }
 
+
     val dbPath = redisDirPath + "/" + dbRow.name
 
     val redisDir = new File(redisDirPath)
@@ -144,10 +145,10 @@ class RedisService @Inject() (implicit
     directory.listFiles.exists(_.getName.equals(name))
   }
 
-  def getDb(id: UUID): Future[DatabaseResponse] = {
+  def getDb(dbId: UUID, userId : UUID): Future[DatabaseResponse] = {
 
     databaseRepository
-      .getDatabaseById(id)
+      .getDatabaseByIdAndUserId(dbId, userId)
       .recoverWith { case t => Future.failed(t) }
       .flatMap {
         case Some(db) =>
@@ -175,7 +176,7 @@ class RedisService @Inject() (implicit
         case None =>
           Future.failed(
             UserService.Exceptions
-              .NotFound(s"There is no database with id: ${id.toString()}")
+              .NotFound(s"There is no database with id: ${dbId.toString()} for user: ${userId.toString()}")
           )
       }
 

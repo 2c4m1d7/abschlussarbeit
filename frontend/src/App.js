@@ -10,16 +10,22 @@ import { fetchUser } from './redux/thunks/userThunks';
 import DatabaseDetails from './views/DatabaseDetails';
 
 const App = () => {
-  const { isLoggedIn } = useSelector(state => state.login);
+  const { isLoggedIn, loading } = useSelector(state => state.login);
   const dispatch = useDispatch();
 
   useEffect(() => {
+
     dispatch(fetchUser())
       .then(dispatch(loginSuccess()))
       .catch(error => {
         console.log(error)
       })
   }, [dispatch]);
+
+  if (loading) {
+    console.log('loading...');
+    return <div>Loading...</div>;
+  }
 
   return (
     <Router>

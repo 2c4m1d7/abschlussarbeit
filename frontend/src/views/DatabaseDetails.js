@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from 'react-router-dom';
 import secureApi from '../api/secureApi';
-import { logout } from '../redux/slices/userSlice';
+import { loginSuccess, logout, requestUser } from '../redux/slices/userSlice';
 import Header from '../components/Header';
 import { useNavigate } from 'react-router-dom';
 import { AiOutlineClose } from 'react-icons/ai';
@@ -16,6 +16,7 @@ const DatabaseDetails = () => {
     const navigate = useNavigate();
 
     const handleBack = () => {
+        console.log("What?")
         navigate(-1)
     };
 
@@ -26,6 +27,7 @@ const DatabaseDetails = () => {
             })
             .catch(error => {
                 console.log(error)
+                navigate("/overview")
             })
     }, [id])
 
