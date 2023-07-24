@@ -146,9 +146,10 @@ class RedisService @Inject() (implicit
       .collect({ case _ => () })
   }
 
-  def dbExists(name: String): Boolean = {
-    val directory = new File(redisDirPath)
-    directory.listFiles.exists(_.getName.equals(name))
+  def dbExists(name: String): Future[Boolean] = {
+    // val directory = new File(redisDirPath)
+    // directory.listFiles.exists(_.getName.equals(name))
+    databaseRepository.existsByName(name)
   }
 
   def getDb(dbId: UUID, userId: UUID): Future[DatabaseResponse] = {

@@ -25,6 +25,8 @@ class RedisController @Inject() (
 
   def addDB(dbName: String) = secuderAction.async {
     implicit request: UserRequest[AnyContent] =>
+      require(!dbName.trim.isEmpty, "Database name cannot be empty")
+
       redisService
         .create(
           DatabaseRow(
@@ -54,9 +56,11 @@ class RedisController @Inject() (
 
   }
 
-  def exists(dbName: String) = secuderAction.async {
-    implicit request: UserRequest[AnyContent] =>
-      Future.successful(Ok(Json.toJson(redisService.dbExists(dbName))))
+  def exists(dbName: String) = Action.async {
+    implicit request: Request[AnyContent] =>
+      redisService.dbExists(dbName)
+      .map(dbExists => Ok(Json.toJson(dbExists)))
+      // Future.successful(Ok(Json.toJson(redisService.dbExists(dbName))))
   }
 
   def getDbDetails(id: String) = secuderAction.async {

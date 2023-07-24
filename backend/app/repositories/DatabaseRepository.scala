@@ -56,9 +56,20 @@ class DatabaseRepository @Inject() (
     )
   }
 
-  def getDatabaseByIdAndUserId(databaseId: UUID, userId: UUID): Future[Option[DatabaseRow]] = {
+  def existsByName(name: String): Future[Boolean] = {
     dbConfig.db.run(
-      databases.filter(db => db.id === databaseId && db.userId === userId).result.headOption
+      databases.filter(_.name === name).exists.result
+    )
+  }
+  def getDatabaseByIdAndUserId(
+      databaseId: UUID,
+      userId: UUID
+  ): Future[Option[DatabaseRow]] = {
+    dbConfig.db.run(
+      databases
+        .filter(db => db.id === databaseId && db.userId === userId)
+        .result
+        .headOption
     )
   }
 
