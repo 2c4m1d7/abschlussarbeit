@@ -66,7 +66,7 @@ const NewDbModal = ({ handleCloseModal, addDatabase }) => {
                                 onClick={handleAddDatabase}
                                 disabled={newDbName.length === 0 || error.length > 0}
                             >
-                                Add
+                                Submit
                             </button>
                         </span>
                     </div>

@@ -11,15 +11,21 @@ import { useNavigate } from 'react-router-dom';
 import secureApi from '../api/secureApi';
 import Header from '../components/Header';
 import NewDbModal from '../components/NewDbModal';
+import  AccountModal  from '../components/AccountModal';
 
 
 
 function MainPage() {
     const navigate = useNavigate();
-    const dispatch = useDispatch();
     const { loading, user } = useSelector(state => state.login);
     const [databases, setDatabases] = useState([]);
     const [selectedDatabases, setSelectedDatabases] = useState([]);
+
+    const [isAccountModalOpen, setIsAccountModalOpen] = useState(false); // new code
+
+    // New handlers for the account modal
+    const handleOpenAccountModal = () => setIsAccountModalOpen(true); // new code
+    const handleCloseAccountModal = () => setIsAccountModalOpen(false); // new code
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const handleOpenModal = () => {
@@ -30,7 +36,7 @@ function MainPage() {
         setIsModalOpen(false);
     };
 
- 
+
 
     const fetchDbs = () => {
         secureApi.get('databases')
@@ -53,7 +59,6 @@ function MainPage() {
             .catch(error => {
                 console.log(error)
             })
-
     };
 
     const handleDatabaseSelection = (index) => {
@@ -79,10 +84,15 @@ function MainPage() {
     }
     return (
         <div className="h-screen bg-gray-100 flex items-center justify-center">
-            <Header />
+            <Header handleOpenAccountModal={handleOpenAccountModal} />
 
             {isModalOpen && (
-               <NewDbModal handleCloseModal={handleCloseModal}  addDatabase={addDatabase} />
+                <NewDbModal handleCloseModal={handleCloseModal} addDatabase={addDatabase} />
+            )}
+
+
+            {isAccountModalOpen && ( 
+                <AccountModal handleCloseModal={handleCloseAccountModal} />
             )}
 
             <main className="mx-auto max-w-lg bg-white p-8 mt-7 rounded-xl shadow-md">
