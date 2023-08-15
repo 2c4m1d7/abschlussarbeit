@@ -56,9 +56,9 @@ class DatabaseRepository @Inject() (
     )
   }
 
-  def existsByName(name: String): Future[Boolean] = {
+  def existsByNameAndUserId(name: String, userId: UUID): Future[Boolean] = {
     dbConfig.db.run(
-      databases.filter(_.name === name).exists.result
+      databases.filter(db => db.name === name && db.userId === userId).exists.result
     )
   }
   def getDatabaseByIdAndUserId(

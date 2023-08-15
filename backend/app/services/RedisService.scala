@@ -31,52 +31,55 @@ import models.DatabaseRow
 import models.dtos.DatabaseListInfo
 import scala.util.Success
 import scala.util.Failure
+import models.User
 
 class RedisService @Inject() (implicit
     configuration: Configuration,
     databaseRepository: DatabaseRepository,
     system: ActorSystem,
     ec: ExecutionContext
-){
+) {
   val redisHost = configuration.get[String]("redis_host")
   val redisDirPath = configuration.get[String]("redis_directory")
   var redisInstances: Map[UUID, Redis] = Map()
   val log = LoggerFactory.getLogger(this.getClass());
 
-  def create(dbRow: DatabaseRow, userId: UUID): Future[Int] = {
+  def create(dbRow: DatabaseRow, user: User): Future[Int] = {
     val existingDb = Await.result(
-      // databaseRepository.getDatabaseByNameAndUserId(dbRow.name, userId)
-      databaseRepository.getDatabaseByName(dbRow.name),
+      databaseRepository.getDatabaseByNameAndUserId(dbRow.name, dbRow.userId),
+      // databaseRepository.getDatabaseByName(dbRow.name),
       Duration.Inf
     ) match {
       case Some(db) => db
       case None     => null
     }
 
-    if (existingDb != null && existingDb.userId == userId) {
-      return start(existingDb)
+    if (existingDb != null) {
+      return start(existingDb, user)
     } else if (existingDb != null) {
       return Future.failed(new RuntimeException("Database already exists"))
     }
 
-    val dbPath = redisDirPath + "/" + dbRow.name
-
     val redisDir = new File(redisDirPath)
-    redisDir.mkdir()
+    println(redisDir.mkdir())
 
-    val db = new File(dbPath)
+    val userDir = new File(redisDirPath + "/" + user.username)
+    userDir.mkdir()
+
+    // val dbPath = redisDirPath + "/" + user.username + "/" + dbRow.name
+    val db = new File(redisDirPath + "/" + user.username + "/" + dbRow.name)
     db.mkdir()
 
     databaseRepository.addDatabase(dbRow)
 
-    return start(dbRow);
+    return start(dbRow, user);
   }
 
-  def start(db: DatabaseRow): Future[Int] = {
+  def start(db: DatabaseRow, user: User): Future[Int] = {
     if (redisInstances.contains(db.id)) {
       return Future.successful(redisInstances(db.id).port)
     }
-    val dbPath = redisDirPath + "/" + db.name
+    val dbPath = redisDirPath + "/" + user.username + "/" + db.name
 
     var exitCode = 1
     var redisPort = -1
@@ -96,11 +99,12 @@ class RedisService @Inject() (implicit
         s"bash ./sh/start_redis.sh $redisPort $dbPath ${db.name}"
       val process = startRedis.run()
       exitCode = process.exitValue()
-
+      println(redisPort)
       if (exitCode != 0) {
         startPort = redisPort + 1
       }
     } while (exitCode != 0)
+   
 
     val redisInstance = Redis(
       host = redisHost,
@@ -114,7 +118,7 @@ class RedisService @Inject() (implicit
 
   def deleteDatabasesByIds(
       databaseIds: Seq[UUID],
-      userId: UUID
+      user: User
   ): Future[Unit] = {
     redisInstances.foreach({ case (id, instance) =>
       if (databaseIds.contains(id)) {
@@ -132,30 +136,30 @@ class RedisService @Inject() (implicit
     redisInstances = redisInstances.removedAll(databaseIds)
 
     databaseRepository
-      .getDatabaseByIdsIn(databaseIds, userId)
+      .getDatabaseByIdsIn(databaseIds, user.id)
       .andThen {
         case Success(dbs) => {
           dbs.foreach(db => {
-            val directoryPath = Path.of(redisDirPath, db.name)
+            val directoryPath = Path.of(redisDirPath, user.username, db.name)
             FileUtils.deleteDir(directoryPath)
           })
-          databaseRepository.deleteDatabaseByIdsIn(databaseIds, userId)
+          databaseRepository.deleteDatabaseByIdsIn(databaseIds, user.id)
         }
         case Failure(exception) => Future.failed(exception)
       }
       .collect({ case _ => () })
   }
 
-  def dbExists(name: String): Future[Boolean] = {
+  def dbExists(name: String, user: User): Future[Boolean] = {
     // val directory = new File(redisDirPath)
     // directory.listFiles.exists(_.getName.equals(name))
-    databaseRepository.existsByName(name)
+    databaseRepository.existsByNameAndUserId(name, user.id)
   }
 
-  def getDb(dbId: UUID, userId: UUID): Future[DatabaseResponse] = {
+  def getDb(dbId: UUID, user: User): Future[DatabaseResponse] = {
 
     databaseRepository
-      .getDatabaseByIdAndUserId(dbId, userId)
+      .getDatabaseByIdAndUserId(dbId, user.id)
       .recoverWith { case t => Future.failed(t) }
       .flatMap {
         case Some(db) =>
@@ -169,7 +173,7 @@ class RedisService @Inject() (implicit
               )
             )
           } else {
-            start(db)
+            start(db, user)
               .map(port =>
                 DatabaseResponse(
                   id = db.id,
@@ -184,7 +188,8 @@ class RedisService @Inject() (implicit
           Future.failed(
             UserService.Exceptions
               .NotFound(
-                s"There is no database with id: ${dbId.toString()} for user: ${userId.toString()}"
+                s"There is no database with id: ${dbId
+                    .toString()} for user: ${user.username.toString()}"
               )
           )
       }

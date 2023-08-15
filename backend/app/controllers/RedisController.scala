@@ -35,7 +35,8 @@ class RedisController @Inject() (
             dbName,
             new Timestamp(System.currentTimeMillis())
           ),
-          request.user.id
+          request.user
+          // request.user.id
         )
         .map(port => Ok(Json.toJson(port)))
         .recoverWith({ case _ => Future.successful(InternalServerError) })
@@ -51,14 +52,14 @@ class RedisController @Inject() (
     implicit request: UserRequest[AnyContent] =>
       val databaseIds = request.request.body.asJson.get.as[Seq[UUID]]
       redisService
-        .deleteDatabasesByIds(databaseIds, request.user.id)
+        .deleteDatabasesByIds(databaseIds, request.user)
         .map(_ => Ok(""))
 
   }
 
-  def exists(dbName: String) = Action.async {
-    implicit request: Request[AnyContent] =>
-      redisService.dbExists(dbName)
+  def exists(dbName: String) = secuderAction.async {
+    implicit request: UserRequest[AnyContent] =>
+      redisService.dbExists(dbName, request.user)
       .map(dbExists => Ok(Json.toJson(dbExists)))
       // Future.successful(Ok(Json.toJson(redisService.dbExists(dbName))))
   }
@@ -67,7 +68,7 @@ class RedisController @Inject() (
     implicit request: UserRequest[AnyContent] =>
       val databaseId = UUID.fromString(id)
       redisService
-        .getDb(databaseId, request.user.id)
+        .getDb(databaseId, request.user)
         .map(db => Ok(Json.toJson(db)))
         .recoverWith({ case e => Future.failed(e) })
   }

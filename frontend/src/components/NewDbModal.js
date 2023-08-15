@@ -13,7 +13,7 @@ const NewDbModal = ({ handleCloseModal, addDatabase }) => {
 
     const doesDatabaseExist = (name) => {
 
-        unsecuredApi.get('/redis/exists/' + name)
+        secureApi.get('/redis/exists/' + name)
             .then(response => {
                 if (response.data) {
                     setError('A database with this name already exists.');
