@@ -104,7 +104,6 @@ class RedisService @Inject() (implicit
         startPort = redisPort + 1
       }
     } while (exitCode != 0)
-   
 
     val redisInstance = Redis(
       host = redisHost,
@@ -142,6 +141,10 @@ class RedisService @Inject() (implicit
           dbs.foreach(db => {
             val directoryPath = Path.of(redisDirPath, user.username, db.name)
             FileUtils.deleteDir(directoryPath)
+            val userDirPath = Path.of(redisDirPath, user.username)
+            if (userDirPath.toFile().listFiles.length == 0) {
+              FileUtils.deleteDir(userDirPath)
+            }
           })
           databaseRepository.deleteDatabaseByIdsIn(databaseIds, user.id)
         }
