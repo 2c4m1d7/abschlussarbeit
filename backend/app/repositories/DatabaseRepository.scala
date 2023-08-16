@@ -39,6 +39,29 @@ class DatabaseRepository @Inject() (
         .result
     )
 
+  def getPort(databaseId: UUID): Future[Option[Int]] = {
+    dbConfig.db
+      .run(
+        databases.filter(_.id === databaseId).map(_.port).result.headOption
+      )
+      .map(_.flatten)
+  }
+
+def updateDatabasePort(databaseId: UUID, port: Option[Int]): Future[Int] = {
+  val query = for {
+    db <- databases if db.id === databaseId
+  } yield db.port
+
+  dbConfig.db.run(query.update(port))
+}
+
+
+  def getAllActiveDatabases: Future[Seq[DatabaseRow]] = {
+    dbConfig.db.run(
+      databases.filter(_.port.isDefined).result
+    )
+  }
+
   def getDatabaseByNameAndUserId(
       name: String,
       userId: UUID
@@ -58,7 +81,10 @@ class DatabaseRepository @Inject() (
 
   def existsByNameAndUserId(name: String, userId: UUID): Future[Boolean] = {
     dbConfig.db.run(
-      databases.filter(db => db.name === name && db.userId === userId).exists.result
+      databases
+        .filter(db => db.name === name && db.userId === userId)
+        .exists
+        .result
     )
   }
   def getDatabaseByIdAndUserId(
@@ -108,11 +134,13 @@ class DatabaseRepository @Inject() (
         "timestamp not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP"
       )
     )
+    def port = column[Option[Int]]("port")
     def * = (
       id,
       userId,
       name,
-      createdAt
+      createdAt,
+      port
     ) <> ((DatabaseRow.apply _).tupled, DatabaseRow.unapply)
   }
 }

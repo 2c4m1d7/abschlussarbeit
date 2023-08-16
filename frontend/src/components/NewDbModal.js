@@ -4,10 +4,12 @@ import unsecuredApi from '../api/unsecuredApi';
 
 const NewDbModal = ({ handleCloseModal, addDatabase }) => {
 
+    const [password, setPassword] = useState("");
+
     const [newDbName, setNewDbName] = useState("");
     const [error, setError] = useState("");
     const handleAddDatabase = () => {
-        addDatabase(newDbName)
+        addDatabase(newDbName, password)
         handleCloseModal()
     };
 
@@ -47,7 +49,7 @@ const NewDbModal = ({ handleCloseModal, addDatabase }) => {
                                         setNewDbName(e.target.value);
                                         if (e.target.value.length > 0) {
                                             doesDatabaseExist(e.target.value)
-                                        }else {
+                                        } else {
                                             setError('');
                                         }
                                     }}
@@ -56,8 +58,20 @@ const NewDbModal = ({ handleCloseModal, addDatabase }) => {
                                 />
                                 {error && <p className="text-red-500">{error}</p>}
                             </div>
+                            
+                            <div className="mt-2">
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Password (Optional)"
+                                    className="w-full px-3 py-2 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:shadow-outline-blue focus:border-blue-300 transition duration-150 ease-in-out"
+                                />
+                            </div>
                         </div>
                     </div>
+
+
                     <div className="mt-5 sm:mt-6">
                         <span className="flex w-full rounded-md shadow-sm">
                             <button

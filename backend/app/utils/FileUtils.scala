@@ -9,16 +9,16 @@ import java.nio.file.DirectoryNotEmptyException
 import scala.util.control.NonFatal
 
 object FileUtils {
-  def deleteDir(pathToDir: Path): Unit = {
-    deleteDirectory(pathToDir)
-  }
+  // def deleteDir(pathToDir: Path): Unit = {
+  //   deleteDirectory(pathToDir)
+  // }
 
- private def deleteDirectory(directory: Path): Unit = {
+  def deleteDir(directory: Path): Unit = {
     try {
       if (Files.isDirectory(directory)) {
         val stream: java.util.stream.Stream[Path] = Files.list(directory)
         try {
-          stream.forEach(deleteDirectory)
+          stream.forEach(deleteDir)
         } finally {
           stream.close()
         }

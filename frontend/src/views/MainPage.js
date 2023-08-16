@@ -51,8 +51,8 @@ function MainPage() {
         fetchDbs()
     }, [])
 
-    const addDatabase = (newDbName) => {
-        secureApi.post('/redis/database?dbName=' + newDbName)
+    const addDatabase = (newDbName, password) => {
+        secureApi.post('/redis/database', {dbName: newDbName,  password: password })
             .then(response => {
                 fetchDbs()
             })

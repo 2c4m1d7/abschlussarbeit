@@ -11,7 +11,8 @@ final case class DatabaseRow(
     id: UUID,
     userId: UUID,
     name: String,
-    createdAt: Timestamp
+    createdAt: Timestamp,
+    port: Option[Int]
 )
 
 object DatabaseRow {

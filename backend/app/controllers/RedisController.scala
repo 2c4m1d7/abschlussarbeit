@@ -14,29 +14,50 @@ import java.util.UUID
 import auth.UserRequest
 import models.DatabaseRow
 import java.sql.Timestamp
+import models.dtos.CreateDatabaseRequest
+import utils.RedisConfigGenerator
+import play.api.Configuration
 
 @Singleton
 class RedisController @Inject() (
     redisService: RedisService,
     secuderAction: SecuredAction,
     cc: ControllerComponents
-)(implicit val ec: ExecutionContext)
+)(implicit val ec: ExecutionContext, configuration: Configuration)
     extends AbstractController(cc) {
 
-  def addDB(dbName: String) = secuderAction.async {
+  val redisHost = configuration.get[String]("redis_host")
+  val redisDirPath = configuration.get[String]("redis_directory")
+
+  def addDB() = secuderAction.async {
     implicit request: UserRequest[AnyContent] =>
-      require(!dbName.trim.isEmpty, "Database name cannot be empty")
+      val databaseRequest: CreateDatabaseRequest =
+        request.request.body.asJson.get.as[CreateDatabaseRequest]
+
+      require(
+        !databaseRequest.dbName.trim.isEmpty,
+        "Database name cannot be empty"
+      )
+
+      val redisConf = RedisConfigGenerator.generateRedisConfig(
+        redisHost,
+        "yes",
+        s"$redisDirPath/${request.user.username}/${databaseRequest.dbName}",
+        databaseRequest.dbName,
+        databaseRequest.password
+      )
 
       redisService
         .create(
           DatabaseRow(
             UUID.randomUUID(),
             request.user.id,
-            dbName,
-            new Timestamp(System.currentTimeMillis())
+            databaseRequest.dbName,
+            new Timestamp(System.currentTimeMillis()),
+            None
           ),
-          request.user
-          // request.user.id
+          request.user,
+          redisConf
         )
         .map(port => Ok(Json.toJson(port)))
         .recoverWith({ case _ => Future.successful(InternalServerError) })
@@ -59,9 +80,10 @@ class RedisController @Inject() (
 
   def exists(dbName: String) = secuderAction.async {
     implicit request: UserRequest[AnyContent] =>
-      redisService.dbExists(dbName, request.user)
-      .map(dbExists => Ok(Json.toJson(dbExists)))
-      // Future.successful(Ok(Json.toJson(redisService.dbExists(dbName))))
+      redisService
+        .dbExists(dbName, request.user)
+        .map(dbExists => Ok(Json.toJson(dbExists)))
+    // Future.successful(Ok(Json.toJson(redisService.dbExists(dbName))))
   }
 
   def getDbDetails(id: String) = secuderAction.async {
