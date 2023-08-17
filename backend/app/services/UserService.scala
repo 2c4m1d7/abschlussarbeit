@@ -6,12 +6,8 @@ import scala.concurrent.ExecutionContext
 import models.User
 import scala.concurrent.Future
 import java.util.UUID
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.util.Success
 import scala.util.Failure
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import play.api.Logging
 
 @Singleton
@@ -20,37 +16,33 @@ class UserService @Inject() (
 )(implicit ec: ExecutionContext) extends Logging {
 
 
-  def findUserById(userId: UUID): Future[User] =
+  def findUserById(userId: UUID): Future[Option[User]] =
     userRepository
       .getUserById(userId)
-      .recoverWith { case t: Throwable => internalError(t.getMessage) }
-      .flatMap {
-        case None       => notFoundUserIdError(userId)
-        case Some(user) => Future.successful(user)
+      .recoverWith { 
+        case t: Throwable => 
+          logger.error(s"Error fetching user by ID: ${userId}", t)
+          Future.failed(UserService.Exceptions.InternalError(t.getMessage))
       }
 
-  def findUserByUsername(username: String): Future[User] = {
+  def findUserByUsername(username: String): Future[Option[User]] =
     userRepository
       .getUserByUsername(username)
-      .recoverWith { case t: Throwable => internalError(t.getMessage) }
-      .flatMap {
-        case None       => notFoundUsernameError(username)
-        case Some(user) => Future.successful(user)
+      .recoverWith { 
+        case t: Throwable => 
+          logger.error(s"Error fetching user by username: ${username}", t)
+          Future.failed(UserService.Exceptions.InternalError(t.getMessage))
       }
-  }
 
-  def addUser(user: User): Future[User] = {
-
+  def addUser(user: User): Future[User] =
     userRepository
       .addUser(user.copy(UUID.randomUUID()))
-      .recoverWith { case t: Throwable =>
-        internalError(t.getMessage)
+      .recoverWith { 
+        case t: Throwable => 
+          logger.error("Error adding user", t)
+          Future.failed(UserService.Exceptions.InternalError(t.getMessage))
       }
-      .flatMap(findUserById(_))
-  }
-
-
-
+      .flatMap(findUserById(_).map(_.getOrElse(throw UserService.Exceptions.NotFound("User not found after adding"))))
 
   private def notFoundUserIdError(userId: UUID) =
     Future.failed(
@@ -65,11 +57,6 @@ class UserService @Inject() (
         s"There is no user with username: ${username}"
       )
     )
-
-  private def internalError(errorMessage: String): Future[Nothing] = {
-    logger.error(errorMessage)
-    Future.failed(UserService.Exceptions.InternalError(errorMessage))
-  }
 }
 
 object UserService {

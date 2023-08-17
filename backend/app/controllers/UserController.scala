@@ -14,56 +14,34 @@ import auth.SecuredAction
 import play.api.http.HeaderNames
 import utils.TokenUtils
 import managers.AuthManager
+import auth.UserRequest
 
 @Singleton
 class UserController @Inject() (
     userService: UserService,
     cc: ControllerComponents,
-    secuderAction: SecuredAction,
+    securedAction: SecuredAction,
     auth: AuthManager
 )(implicit
     executionContext: ExecutionContext
 ) extends AbstractController(cc) {
 
-  def addUser() = Action.async { implicit request: Request[AnyContent] =>
-    val user = User(
-      id = null,
-      username = request.body.asJson.get("username").as[String],
-      firstName = request.body.asJson.get("firstName").as[String],
-      lastName = request.body.asJson.get("lastName").as[String],
-      mail = request.body.asJson.get("mail").as[String],
-      employeeType = request.body.asJson.get("employeeType").as[String]
-    )
-
-    userService
-      .addUser(user)
-      .map(user => Ok(Json.toJson(user)))
-      .recoverWith { case e: RuntimeException => exceptionToResult(e) }
-
+  def addUser() = Action.async(parse.json) { implicit request =>
+    request.body
+      .validate[User]
+      .fold(
+        errors => Future.successful(BadRequest(JsError.toJson(errors))),
+        user =>
+          userService
+            .addUser(user)
+            .map(addedUser => Ok(Json.toJson(addedUser)))
+            .recoverWith { case e: RuntimeException => exceptionToResult(e) }
+      )
   }
 
-  def findUser() = secuderAction.async {
-    implicit request: Request[AnyContent] =>
-
-      request.headers
-        .get(HeaderNames.AUTHORIZATION)
-        .map(_.split(" ").last) match {
-        case Some(token) =>
-         
-         auth.verifyToken(token) // TODO change logic
-          .map(user => Ok(Json.toJson(user)))
-            .recoverWith {
-              case e: UserService.Exceptions.NotFound =>
-                exceptionToResult(e)
-            }
-        case None =>
-          // Missing authorization header, return unauthorized response
-          exceptionToResult(
-            UserService.Exceptions.InternalError()
-          )
-        // Future.successful(Results.Unauthorized("Missing authorization header"))
-      }
-
+  def findUser() = securedAction.async {
+    implicit request: UserRequest[AnyContent] =>
+      Future.successful(Ok(Json.toJson(request.user)))
   }
 
   def exceptionToResult(e: RuntimeException): Future[Result] = e match {

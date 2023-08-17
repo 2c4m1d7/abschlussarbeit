@@ -55,30 +55,6 @@ class SecuredAction @Inject() (
 
   override def parser: BodyParser[AnyContent] = this.parser
 
-  // override def invokeBlock[A](
-  //     request: Request[A],
-  //     block: Request[A] => Future[Result]
-  // ): Future[Result] = {
-  //   val maybeToken =
-  //     request.headers.get(HeaderNames.AUTHORIZATION).map(_.split(" ").last)
-
-  //   maybeToken match {
-  //     case Some(token) =>
-  //       authManager
-  //         .verifyToken(token)
-  //         .flatMap(user => block(request))
-  //         .recoverWith {
-  //           case e: SecuredAction.Exceptions.SecuredActionException =>
-  //             exceptionToResult(e)
-  //         }
-  //     case None =>
-  //       // Missing authorization header, return unauthorized response
-  //       exceptionToResult(
-  //         SecuredAction.Exceptions.InvalidAccessTokenRejection()
-  //       )
-  //     // Future.successful(Results.Unauthorized("Missing authorization header"))
-  //   }
-  // }
 
   def exceptionToResult(
       error: SecuredAction.Exceptions.SecuredActionException

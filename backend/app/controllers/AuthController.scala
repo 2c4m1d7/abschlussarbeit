@@ -1,15 +1,12 @@
 package controllers
 
 import javax.inject._
-import javax.inject.Inject
-import play.api.mvc.ControllerComponents
+import play.api.mvc._
 import scala.concurrent.ExecutionContext
-import play.api.mvc.AbstractController
 import managers.AuthManager
-import models.dtos.CredentialsRequest
+import models.dtos.{CredentialsRequest, RefreshTokenRequest}
 import scala.concurrent.Future
-import play.api.libs.json.Json
-import models.dtos.RefreshTokenRequest
+import play.api.libs.json._
 import utils.TokenUtils
 
 @Singleton
@@ -22,51 +19,47 @@ class AuthController @Inject() (
 ) extends AbstractController(cc) {
 
   def signIn() = Action(parse.json).async { implicit request =>
-    request.body
-      .validate[CredentialsRequest]
-      .fold(
-        errors => {
-          Future.successful(
-            BadRequest(Json.obj("message" -> "Invalid request body"))
-          )
-        },
-        credentials => {
-          authManager
-            .signIn(credentials.username, credentials.password)
-            .map(authResponse => {
-              Ok(Json.toJson(authResponse))
-            })
-            .recoverWith { case _ => Future.successful(InternalServerError) }
-          //   Future.successful(Ok(Json.toJson(tokens)))
-        }
-      )
-  }
-
-  def refreshToken() = Action(parse.json).async { implicit request =>
-    request.body
-      .validate[RefreshTokenRequest]
-      .fold(
-        errors => {
-          Future.successful(
-            BadRequest(Json.obj("message" -> "Invalid request body"))
-          )
-        },
-        refreshTokenRequest => {
-          tokenUtils.refreshAccessToken(refreshTokenRequest.refreshToken) match {
-            case Some(accessToken) => {
-              Future.successful(Ok(Json.toJson(accessToken)))
-            }
-            case None => Future.successful(InternalServerError)
-
+  request.body
+    .validate[CredentialsRequest]
+    .fold(
+      errors => {
+        val errorMessage = errors.flatMap {
+          case (path, validationErrors) =>
+            validationErrors.map(e => s"${path.toJsonString} -> ${e.message}")
+        }.mkString(", ")
+        Future.successful(BadRequest(Json.obj("message" -> errorMessage)))
+      },
+      credentials => {
+        authManager
+          .signIn(credentials.username, credentials.password)
+          .map(authResponse => Ok(Json.toJson(authResponse)))
+          .recover {
+            case e: Exception => InternalServerError(Json.obj("message" -> e.getMessage))
           }
-          // authManager
-          //   .refreshToken(credentials.refreshToken)
-          //   .map(authResponse => {
-          //     Ok(Json.toJson(authResponse))
-          //   })
-          //   .recoverWith { case _ => Future.successful(InternalServerError) }
-        }
-      )
+      }
+    )
+}
 
-  }
+def refreshToken() = Action(parse.json).async { implicit request =>
+  request.body
+    .validate[RefreshTokenRequest]
+    .fold(
+      errors => {
+        val errorMessage = errors.flatMap {
+          case (path, validationErrors) =>
+            validationErrors.map(e => s"${path.toJsonString} -> ${e.message}")
+        }.mkString(", ")
+        Future.successful(BadRequest(Json.obj("message" -> errorMessage)))
+      },
+      refreshTokenRequest => {
+        tokenUtils.refreshAccessToken(refreshTokenRequest.refreshToken) match {
+          case Some(accessToken) => Future.successful(Ok(Json.toJson(accessToken)))
+          case None => Future.successful(
+            InternalServerError(Json.obj("message" -> "Failed to refresh access token"))
+          )
+        }
+      }
+    )
+}
+
 }

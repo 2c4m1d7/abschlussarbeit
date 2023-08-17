@@ -6,12 +6,12 @@ import views.html.defaultpages.error
 object ConnectionUtils {
 
   def isPortOpen(host: String, port: Int): Boolean = {
-      val socket = new Socket()
+    val socket = new Socket()
     try {
       socket.connect(new InetSocketAddress(host, port), 1000)
       false
     } catch {
-      case e: Throwable => true
+      case _: Throwable => true
     } finally {
       socket.close()
     }
@@ -21,8 +21,7 @@ object ConnectionUtils {
       host: String,
       startPort: Int,
       endPort: Int
-  ): Option[Int] = {
+  ): Option[Int] = synchronized {
     (startPort to endPort).find(isPortOpen(host, _))
   }
-
 }
