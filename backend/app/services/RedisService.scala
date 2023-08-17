@@ -9,7 +9,6 @@ import scala.concurrent.duration._
 import sys.process._
 import utils.ConnectionUtils
 import services.RedisInstanceManager
-import scredis.Client
 import akka.actor.ActorSystem
 import scredis.Redis
 import java.io.File
@@ -19,7 +18,6 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.FileVisitResult
 import utils.FileUtils
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.UUID
 import models.dtos.DatabaseResponse
@@ -81,57 +79,6 @@ class RedisService @Inject() (implicit
     return start(dbRow, user);
   }
 
-  // def start(db: DatabaseRow, user: User): Future[Int] = {
-  //   if (databaseRepository.getPort(db.id) != None) {
-  //     return Future.successful(redisInstances(db.id).port)
-  //   }
-
-  //   val dbPath = redisDirPath + "/" + user.username + "/" + db.name
-
-  //   var exitCode = 1
-  //   var redisPort = -1
-  //   var startPort = 49152
-  //   do {
-
-  //     redisPort = ConnectionUtils
-  //       .findAvailablePort(redisHost, startPort, 65535)
-  //       .getOrElse(-1)
-
-  //     if (redisPort == -1) {
-  //       return Future.failed(
-  //         new RuntimeException("Redis port not found")
-  //       ); // TODO: handle this
-  //     }
-  //     val configPath = dbPath + "/redis.conf"
-  //     val startRedis =
-  //       s"bash ./sh/start_redis.sh $redisPort $configPath"
-
-  //     val process = startRedis.run()
-  //     exitCode = process.exitValue()
-
-  //     if (exitCode != 0) {
-  //       startPort = redisPort + 1
-  //     }
-  //   } while (exitCode != 0)
-
-  //   val redisInstance = Redis(
-  //     host = redisHost,
-  //     port = redisPort,
-  //     authOpt = Some(
-  //       AuthConfig(
-  //         None,
-  //         RedisConfigReader
-  //           .extractPassword(dbPath + "/redis.conf")
-  //           .getOrElse("")
-  //       )
-  //     )
-  //   )
-
-  //   redisInstances = redisInstances + ((db.id, redisInstance))
-  //   new Thread(new RedisInstanceManager(redisInstance)).start()
-  //   return Future.successful(redisPort);
-  // }
-
   def start(db: DatabaseRow, user: User): Future[Int] = {
     databaseRepository.getPort(db.id).flatMap {
       case Some(port) => Future.successful(port)
@@ -153,20 +100,19 @@ class RedisService @Inject() (implicit
         val process = startRedisCmd.run()
 
         if (process.exitValue() == 0) {
+
+          val authPassword = RedisConfigReader
+            .extractPassword(s"$dbPath/redis.conf")
+            .getOrElse("")
+
           val redisInstance = Redis(
             host = redisHost,
             port = redisPort,
-            authOpt = Some(
-              AuthConfig(
-                None,
-                RedisConfigReader
-                  .extractPassword(s"$dbPath/redis.conf")
-                  .getOrElse("")
-              )
-            )
+            authOpt =
+              if (authPassword.nonEmpty) Some(AuthConfig(None, authPassword))
+              else None
           )
 
-          // redisInstances += db.id -> redisInstance
           databaseRepository.updateDatabasePort(db.id, Some(redisPort))
           new Thread(new RedisInstanceManager(redisInstance)).start()
           Future.successful(redisPort)
@@ -179,124 +125,24 @@ class RedisService @Inject() (implicit
     }
   }
 
-  // def deleteDatabasesByIds(
-  //     databaseIds: Seq[UUID],
-  //     user: User
-  // ): Future[Unit] = {
-  //   redisInstances.foreach({ case (id, instance) =>
-  //     if (databaseIds.contains(id)) {
-  //       val dbNameTry: Try[String] = Try {
-  //         val dbName = Await.result(
-  //           instance.configGet("dbfilename").map(_.values.head),
-  //           10.seconds
-  //         )
-  //         dbName
-  //       }
-
-  //       val dbName = dbNameTry match {
-  //         case Success(dbName) =>
-  //           dbName
-  //         case Failure(ex) =>
-  //           println(s"Fehler beim Abrufen des Datenbanknamens: $ex")
-  //           ""
-  //       }
-
-  //       instance
-  //         .shutdown()
-  //         .recover({
-  //           case e => {
-  //             log.warn(e.getMessage(), e)
-  //             val pass = RedisConfigReader
-  //               .extractPassword(
-  //                 s"$redisDirPath/${user.username}/$dbName/redis.conf"
-  //               )
-  //               .getOrElse("")
-  //             s"redis-cli -a $pass -h ${instance.host} -p ${instance.port} shutdown".!
-  //           }
-  //         })
-  //     }
-  //   })
-
-  //   redisInstances = redisInstances.removedAll(databaseIds)
-
-  //   databaseRepository
-  //     .getDatabaseByIdsIn(databaseIds, user.id)
-  //     .andThen {
-  //       case Success(dbs) => {
-  //         dbs.foreach(db => {
-  //           val directoryPath = Path.of(redisDirPath, user.username, db.name)
-  //           FileUtils.deleteDir(directoryPath)
-  //           val userDirPath = Path.of(redisDirPath, user.username)
-  //           if (userDirPath.toFile().listFiles.length == 0) {
-  //             FileUtils.deleteDir(userDirPath)
-  //           }
-  //         })
-  //         databaseRepository.deleteDatabaseByIdsIn(databaseIds, user.id)
-  //       }
-  //       case Failure(exception) => Future.failed(exception)
-  //     }
-  //     .collect({ case _ => () })
-  // }
-
-  // def deleteDatabasesByIds(databaseIds: Seq[UUID], user: User)(implicit
-  //     ec: ExecutionContext
-  // ): Future[Unit] = {
-  //   val deleteTasks = redisInstances.collect {
-  //     case (id, instance) if databaseIds.contains(id) =>
-  //       for {
-  //         dbName <- getDbNameById(id)
-  //         _ <- shutdownInstance(instance, dbName, user)
-  //         _ <- deleteFromRepository(id)
-  //         _ <- deleteDirectory(dbName, user)
-  //       } yield ()
-  //   }
-  //   Future.sequence(deleteTasks).map(_ => ())
-  // }
-
   def deleteDatabasesByIds(databaseIds: Seq[UUID], user: User)(implicit
       ec: ExecutionContext
   ): Future[Unit] = {
 
- val deleteTasks = databaseIds.map { id =>
-  for {
-    dbRowOption <- databaseRepository.getDatabaseById(id)
-    _ <- dbRowOption match {
-      case Some(dbRow) if dbRow.port.isDefined => stopRedis(dbRow)
-      case _ => Future.successful(())
+    val deleteTasks = databaseIds.map { id =>
+      for {
+        dbRowOption <- databaseRepository.getDatabaseById(id)
+        _ <- dbRowOption match {
+          case Some(dbRow) if dbRow.port.isDefined => stopRedis(dbRow)
+          case _                                   => Future.successful(())
+        }
+        _ <- deleteFromRepository(id)
+        _ <- deleteDirectory(dbRowOption.map(_.name).getOrElse(""), user)
+      } yield ()
     }
-    _ <- deleteFromRepository(id)
-    _ <- deleteDirectory(dbRowOption.map(_.name).getOrElse(""), user)
-  } yield ()
-}
-
 
     Future.sequence(deleteTasks).map(_ => ())
   }
-
-  // private def getDbNameById(id: UUID): Future[String] = {
-  //   databaseRepository.getDatabaseById(id).flatMap {
-  //     case Some(dbRow) => Future.successful(dbRow.name)
-  //     case None =>
-  //       log.warn(s"Keine Datenbank mit ID: $id gefunden.")
-  //       Future.failed(new Exception(s"Keine Datenbank mit ID: $id gefunden."))
-  //   }
-  // }
-
-  // private def shutdownInstance(
-  //     instance: Redis,
-  //     dbName: String,
-  //     user: User
-  // ): Future[Unit] = {
-  //   instance.shutdown().recoverWith { case e =>
-  //     log.warn(e.getMessage(), e)
-  //     val pass = RedisConfigReader
-  //       .extractPassword(s"$redisDirPath/${user.username}/$dbName/redis.conf")
-  //       .getOrElse("")
-  //     Future {
-  //       s"redis-cli -a $pass -h ${instance.host} -p ${instance.port} shutdown".!
-  //     }
-  //   }
-  // }
 
   private def deleteFromRepository(id: UUID): Future[Unit] = {
 
@@ -380,33 +226,13 @@ class RedisService @Inject() (implicit
       })
   }
 
-  // private def stopRedis(dbRow: DatabaseRow): Unit = {
-  //   val user =
-  //     Await.result(userRepository.getUserById(dbRow.userId), Duration.Inf).get
-  //   val redisConfigPath =
-  //     s"$redisDirPath/${user.username}/${dbRow.name}/redis.conf"
-  //   val authPassword =
-  //     RedisConfigReader.extractPassword(redisConfigPath).getOrElse("")
-  //   val redisInstance = Redis(
-  //     host = redisHost,
-  //     port = dbRow.port.getOrElse(0),
-  //     authOpt = Some(AuthConfig(None, authPassword))
-  //   )
-  //   redisInstance.shutdown()
-
-  //   Await.result(
-  //     databaseRepository.updateDatabasePort(dbRow.id, None),
-  //     Duration.Inf
-  //   )
-  // }
-
   private def stopRedis(dbRow: DatabaseRow): Future[Unit] = {
 
     for {
       userOpt <- userRepository.getUserById(dbRow.userId)
       user = userOpt.getOrElse(
         throw new Exception("User not found")
-      ) // Hier könnten Sie eine genauere Exception werfen
+      ) // Hier könnten genauere Exception geworfen werden
       redisConfigPath =
         s"$redisDirPath/${user.username}/${dbRow.name}/redis.conf"
       authPassword = RedisConfigReader
@@ -415,7 +241,9 @@ class RedisService @Inject() (implicit
       // redisInstance = Redis(
       //   host = redisHost,
       //   port = dbRow.port.getOrElse(0),
-      //   authOpt = Some(AuthConfig(None, authPassword))
+      //   authOpt =
+      //     if (authPassword.nonEmpty) Some(AuthConfig(None, authPassword))
+      //     else None
       // )
       _ <-
         // redisInstance.shutdown().recoverWith { case e =>
@@ -434,28 +262,12 @@ class RedisService @Inject() (implicit
     } yield ()
   }
 
-  // def shutdownAllRedisInstances: Unit = {
-  //   Await
-  //     .result(databaseRepository.getAllActiveDatabases, Duration.Inf)
-  //     .foreach { dbRow =>
-  //       stopRedis(dbRow)
-  //     }
-  // }
-
   def shutdownAllRedisInstances: Future[Unit] = {
     databaseRepository.getAllActiveDatabases.flatMap { dbs =>
       val shutdownFutures = dbs.map(dbRow => stopRedis(dbRow))
       Future.sequence(shutdownFutures).map(_ => ())
     }
   }
-
-  // Runtime.getRuntime.addShutdownHook(new Thread(() => {
-  //   Await
-  //     .result(databaseRepository.getAllActiveDatabases, Duration.Inf)
-  //     .foreach { dbRow =>
-  //       stopRedis(dbRow)
-  //     }
-  // }))
 
   cs.addTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "my-shutdown-task") {
     () =>

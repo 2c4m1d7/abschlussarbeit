@@ -3,7 +3,6 @@ package controllers
 import javax.inject._
 import play.api.mvc._
 import play.api.libs.json._
-
 import scala.concurrent.Future
 import scala.util.Failure
 import play.core.server.ProdServerStart
@@ -62,12 +61,6 @@ class RedisController @Inject() (
         .map(port => Ok(Json.toJson(port)))
         .recoverWith({ case _ => Future.successful(InternalServerError) })
   }
-
-  // def deleteDB(id: String) = secuderAction.async {
-  //   implicit request: UserRequest[AnyContent] =>
-  //     redisService.delete(UUID.fromString(id))
-  //     Future.successful(Ok(""))
-  // }
 
   def deleteDBs() = secuderAction.async {
     implicit request: UserRequest[AnyContent] =>
