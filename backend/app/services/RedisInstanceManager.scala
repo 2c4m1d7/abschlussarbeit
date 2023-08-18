@@ -51,6 +51,7 @@ class RedisInstanceManager @Inject() (redisInstance: Redis, dbRow: DatabaseRow)(
         }
       }
     }
+
     redisInstance.shutdown()
     databaseRepository.updateDatabasePort(dbRow.id, None)
 

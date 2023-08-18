@@ -149,7 +149,7 @@ class RedisService @Inject() (implicit
             Future.successful(redisPort)
           } catch {
             case ex: Exception =>
-              redisInstance.shutdown() // Aufräumen und Ressourcen freigeben
+              redisInstance.shutdown() 
               databaseRepository.updateDatabasePort(db.id, None)
               Future.failed(ex)
           }

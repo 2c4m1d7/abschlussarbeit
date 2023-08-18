@@ -1,44 +1,47 @@
 package utils
 
-import java.nio.file.Files
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.Path
+import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
-import java.nio.file.FileVisitResult
-import java.nio.file.DirectoryNotEmptyException
 import scala.util.control.NonFatal
+import play.api.Logging
+import java.io.IOException
 
-object FileUtils {
-
+object FileUtils extends Logging {
 
   def deleteDir(directory: Path): Unit = {
     try {
-      if (Files.isDirectory(directory)) {
-        val stream: java.util.stream.Stream[Path] = Files.list(directory)
-        try {
-          stream.forEach(deleteDir)
-        } finally {
-          stream.close()
-        }
-      }
-
-      var deleted = false
-      var retries = 0
-      while (!deleted && retries < 5) {
-        try {
-          Files.delete(directory)
-          deleted = true
-        } catch {
-          case _: DirectoryNotEmptyException =>
-            retries += 1
-            Thread.sleep(100)
-          case NonFatal(ex) =>
-            throw ex
-        }
+      if (Files.exists(directory)) {
+        Files.walkFileTree(directory, new SimpleFileVisitor[Path] {
+          override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
+            tryDelete(file)
+            FileVisitResult.CONTINUE
+          }
+          override def postVisitDirectory(dir: Path, exc: IOException): FileVisitResult = {
+            tryDelete(dir)
+            FileVisitResult.CONTINUE
+          }
+        })
       }
     } catch {
-      case ex: Throwable =>
-        println(s"Failed to delete $directory: $ex")
+      case NonFatal(ex) =>
+        logger.error(s"Failed to delete $directory", ex)
+    }
+  }
+
+  private def tryDelete(path: Path): Unit = {
+    var deleted = false
+    var retries = 0
+    while (!deleted && retries < 5) {
+      try {
+        Files.delete(path)
+        deleted = true
+      } catch {
+        case _: DirectoryNotEmptyException =>
+          retries += 1
+          Thread.sleep(100)
+        case NonFatal(ex) =>
+          throw ex
+      }
     }
   }
 }
