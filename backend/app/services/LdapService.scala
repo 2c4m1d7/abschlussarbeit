@@ -6,7 +6,7 @@ import javax.inject.Inject
 import play.api.Configuration
 import scala.concurrent.ExecutionContext
 import org.apache.directory.ldap.client.api.LdapConnectionConfig
-import services.exceptions.ServiceException
+
 import LdapService.Exceptions._
 import org.apache.directory.ldap.client.api.LdapNetworkConnection
 import org.apache.directory.api.ldap.model.exception.LdapException
@@ -28,14 +28,14 @@ class LdapService @Inject() (config: Configuration)(implicit
   implicit val intLoader: ConfigLoader[Int] = ConfigLoader.intLoader
   implicit val boolLoader: ConfigLoader[Boolean] = ConfigLoader.booleanLoader
 
-  private def getConfigValue[T](
+   private def getConfigValue[T](
       key: String
   )(implicit loader: ConfigLoader[T]): Future[T] = {
     Future.fromTry(
       Try(
         config
           .getOptional[T](key)
-          .getOrElse(throw new ConfigNotFoundException(key))
+          .getOrElse(throw ConfigurationError(s"Configuration key not found: $key"))
       )
     )
   }
@@ -85,7 +85,7 @@ class LdapService @Inject() (config: Configuration)(implicit
       ldapConnection
 
     }.recoverWith {
-      case _: LdapException => Future.failed(AccessDenied())
+      case _: LdapException => Future.failed(AccessError())
       case t: Throwable     => internalError(t.getMessage)
     }
 
@@ -103,10 +103,10 @@ class LdapService @Inject() (config: Configuration)(implicit
         "*"
       )
       if (entryCursor.next()) entryCursor.get()
-      else throw new NoEntryFoundException(username)
+      else throw AccessError(s"No LDAP entry found for user: $username")
     }.recoverWith {
-      case e: LdapException   => Future.failed(AccessDenied(e.getMessage))
-      case e: CursorException => Future.failed(AccessDenied(e.getMessage))
+      case e: LdapException   => Future.failed(AccessError(e.getMessage))
+      case e: CursorException => Future.failed(AccessError(e.getMessage))
       case t: Throwable       => internalError(t.getMessage)
     }
 
@@ -129,29 +129,17 @@ class LdapService @Inject() (config: Configuration)(implicit
 
   private def internalError(errorMessage: String): Future[Nothing] = {
     logger.error(errorMessage)
-    Future.failed(LdapService.Exceptions.InternalError(errorMessage))
+    Future.failed(InternalError(errorMessage))
   }
 
 }
 
 object LdapService {
   object Exceptions {
-    sealed abstract class LdapServiceException(message: String)
-        extends ServiceException(message)
+    sealed abstract class LdapServiceException(message: String) extends RuntimeException(message)
 
-    final case class ConfigNotFoundException(key: String)
-        extends LdapServiceException(s"Configuration key not found: $key")
-    final case class NoEntryFoundException(username: String)
-        extends LdapServiceException(s"No LDAP entry found for user: $username")
-
-    final case class EnvironmentError(
-        message: String = "Could not load ldap environment"
-    ) extends LdapServiceException(message)
-
-    final case class AccessDenied(message: String = "Access denied")
-        extends LdapServiceException(message)
-
-    final case class InternalError(message: String = "Internal error")
-        extends LdapServiceException(message)
+    final case class ConfigurationError(message: String) extends LdapServiceException(message)
+    final case class AccessError(message: String = "Access denied") extends LdapServiceException(message)
+    final case class InternalError(message: String = "Internal error") extends LdapServiceException(message)
   }
 }

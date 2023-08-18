@@ -47,8 +47,6 @@ class UserController @Inject() (
   def exceptionToResult(e: RuntimeException): Future[Result] = e match {
     case _: UserService.Exceptions.NotFound =>
       Future.successful(NotFound(e.getMessage))
-    case _: UserService.Exceptions.AccessDenied =>
-      Future.successful(Forbidden(e.getMessage))
     case _: UserService.Exceptions.InternalError =>
       Future.successful(BadRequest(e.getMessage))
   }
