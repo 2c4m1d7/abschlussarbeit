@@ -9,9 +9,7 @@ import java.nio.file.DirectoryNotEmptyException
 import scala.util.control.NonFatal
 
 object FileUtils {
-  // def deleteDir(pathToDir: Path): Unit = {
-  //   deleteDirectory(pathToDir)
-  // }
+
 
   def deleteDir(directory: Path): Unit = {
     try {

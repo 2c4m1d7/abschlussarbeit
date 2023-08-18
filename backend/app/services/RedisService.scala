@@ -189,7 +189,7 @@ class RedisService @Inject() (implicit
     databaseRepository.deleteDatabaseById(id).map(_ => ()).recoverWith {
       case e =>
         Future.failed(
-          new Exception(
+          new RuntimeException(
             s"Failed to delete database with ID: $id. Error: ${e.getMessage}"
           )
         )

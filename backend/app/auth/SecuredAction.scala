@@ -22,73 +22,37 @@ import play.api.mvc.ActionBuilder
 import play.api.mvc.ActionTransformer
 import play.api.mvc.ActionRefiner
 
-class UserRequest[A](val user: User, val request: Request[A])
-    extends WrappedRequest[A](request)
+class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
 
 class SecuredAction @Inject() (
-    parser: BodyParsers.Default,
+    val parser: BodyParsers.Default,
     authManager: AuthManager
 )(implicit
-    val ec: ExecutionContext
+    ec: ExecutionContext
 ) extends ActionBuilder[UserRequest, AnyContent]
-    with ActionRefiner[Request, UserRequest] 
-    with Logging{
+    with ActionRefiner[Request, UserRequest]
+    with Logging {
 
   override protected def refine[A](
       request: Request[A]
   ): Future[Either[Result, UserRequest[A]]] = {
-    val maybeToken =
-      request.headers.get(HeaderNames.AUTHORIZATION).map(_.split(" ").last)
-
-    maybeToken match {
+    request.headers.get(HeaderNames.AUTHORIZATION).flatMap { header =>
+      val parts = header.split(" ")
+      if (parts.length == 2 && parts(0) == "Bearer") Some(parts(1)) else None
+    } match {
       case Some(token) =>
         authManager
           .verifyToken(token)
           .map(user => Right(new UserRequest(user, request)))
-          .recover { case _ => Left(Results.Unauthorized("Invalid access token")) }
+          .recover { case _ => 
+            logger.warn("Failed to verify access token")
+            Left(Results.Unauthorized("Invalid access token")) 
+          }
       case None =>
+        logger.warn("Missing access token in the request headers")
         Future.successful(Left(Results.Unauthorized("Access token is missing")))
     }
   }
 
   override protected def executionContext: ExecutionContext = ec
-
-  override def parser: BodyParser[AnyContent] = this.parser
-
-
-  def exceptionToResult(
-      error: SecuredAction.Exceptions.SecuredActionException
-  ): Future[Result] = {
-    logger.warn(error.getMessage)
-    error match {
-      case _: SecuredAction.Exceptions.MissingAccessTokenRejection =>
-        Future.successful(Unauthorized(error.getMessage))
-      case _: SecuredAction.Exceptions.InvalidAccessTokenRejection =>
-        Future.successful(Unauthorized(error.getMessage))
-      case _: SecuredAction.Exceptions.InvalidAuthContentRejection =>
-        Future.successful(Unauthorized(error.getMessage))
-      case _: SecuredAction.Exceptions.InternalError =>
-        Future.successful(BadRequest(error.getMessage))
-    }
-  }
-}
-
-object SecuredAction {
-  object Exceptions {
-    sealed abstract class SecuredActionException(message: String)
-        extends Exception(message)
-
-    final case class MissingAccessTokenRejection(
-        message: String = "Access token missing"
-    ) extends SecuredActionException(message)
-    final case class InvalidAccessTokenRejection(
-        message: String = "Invalid access token"
-    ) extends SecuredActionException(message)
-    final case class InvalidAuthContentRejection(
-        message: String = "Invalid claim"
-    ) extends SecuredActionException(message)
-    final case class InternalError(
-        message: String = "Oops. Something went wrong :("
-    ) extends SecuredActionException(message)
-  }
 }
