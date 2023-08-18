@@ -49,7 +49,9 @@ class RedisService @Inject() (implicit
     cs: CoordinatedShutdown
 ) {
 
-
+  private val redisManagers
+      : scala.collection.concurrent.Map[UUID, RedisInstanceManager] =
+    scala.collection.concurrent.TrieMap()
   val redisHost = configuration.get[String]("redis_host")
   val redisDirPath = configuration.get[String]("redis_directory")
   val log = LoggerFactory.getLogger(this.getClass());
@@ -144,12 +146,23 @@ class RedisService @Inject() (implicit
           )
 
           try {
+            var stopCommand = ""
+            if (authPassword.nonEmpty) {
+              stopCommand =
+                s"redis-cli -a $authPassword -h $redisHost -p ${redisPort} shutdown"
+            } else {
+              stopCommand = s"redis-cli -h $redisHost -p ${redisPort} shutdown"
+            }
+
+            val manager =
+              new RedisInstanceManager(redisInstance, db, stopCommand)
+            redisManagers.put(db.id, manager)
+            new Thread(manager).start()
             databaseRepository.updateDatabasePort(db.id, Some(redisPort))
-            new Thread(new RedisInstanceManager(redisInstance, db)).start()
             Future.successful(redisPort)
           } catch {
             case ex: Exception =>
-              redisInstance.shutdown() 
+              redisInstance.shutdown()
               databaseRepository.updateDatabasePort(db.id, None)
               Future.failed(ex)
           }
@@ -198,6 +211,7 @@ class RedisService @Inject() (implicit
 
   private def deleteDirectory(dbName: String, user: User): Future[Unit] =
     Future {
+      Thread.sleep(1000)
       val directoryPath = Path.of(redisDirPath, user.username, dbName)
       FileUtils.deleteDir(directoryPath)
       val userDirPath = Path.of(redisDirPath, user.username)
@@ -267,38 +281,27 @@ class RedisService @Inject() (implicit
   }
 
   private def stopRedis(dbRow: DatabaseRow): Future[Unit] = {
-
     for {
       userOpt <- userRepository.getUserById(dbRow.userId)
       user = userOpt.getOrElse(
-        throw new Exception("User not found")
-      ) // Hier könnten genauere Exception geworfen werden
+        throw new RuntimeException("User not found")
+      )
       redisConfigPath =
         s"$redisDirPath/${user.username}/${dbRow.name}/redis.conf"
       authPassword = RedisConfigReader
         .extractPassword(redisConfigPath)
         .getOrElse("")
-      // redisInstance = Redis(
-      //   host = redisHost,
-      //   port = dbRow.port.getOrElse(0),
-      //   authOpt =
-      //     if (authPassword.nonEmpty) Some(AuthConfig(None, authPassword))
-      //     else None
-      // )
-      _ <-
-        // redisInstance.shutdown().recoverWith { case e =>
-        //   log.warn(e.getMessage(), e)
-        if (authPassword.nonEmpty) {
-          Future {
-            s"redis-cli -a $authPassword -h $redisHost -p ${dbRow.port.get} shutdown".!
-          }
-        } else {
-          Future {
-            s"redis-cli  -h $redisHost -p ${dbRow.port.get} shutdown".!
-          }
+      _ <- {
+        val managerOpt = redisManagers.get(dbRow.id)
+        managerOpt match {
+          case Some(manager) =>
+            manager.stop()
+            manager.whenStopped().map { _ =>
+              redisManagers.remove(dbRow.id)
+            }
+          case None => Future.successful(())
         }
-      // }
-      _ <- databaseRepository.updateDatabasePort(dbRow.id, None)
+      }
     } yield ()
   }
 
