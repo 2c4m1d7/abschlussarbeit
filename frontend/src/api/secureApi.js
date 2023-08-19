@@ -3,7 +3,6 @@ import unsecuredApi from './unsecuredApi';
 import axios from 'axios';
 
 const secureApi = axios.create({
-    baseURL: 'http://localhost:9000',
     timeout: 5000,
     headers: {
         'Content-Type': 'application/json',

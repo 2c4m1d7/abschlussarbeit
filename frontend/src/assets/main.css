@@ -513,9 +513,6 @@ video {
 .mb-7 {
   margin-bottom: 1.75rem;
 }
-.ml-4 {
-  margin-left: 1rem;
-}
 .mr-2 {
   margin-right: 0.5rem;
 }
@@ -540,6 +537,15 @@ video {
 .mt-7 {
   margin-top: 1.75rem;
 }
+.mt-60 {
+  margin-top: 15rem;
+}
+.mt-40 {
+  margin-top: 10rem;
+}
+.mt-20 {
+  margin-top: 5rem;
+}
 .mt-4 {
   margin-top: 1rem;
 }
@@ -555,11 +561,17 @@ video {
 .h-5 {
   height: 1.25rem;
 }
+.h-60 {
+  height: 15rem;
+}
 .h-screen {
   height: 100vh;
 }
-.h-60 {
-  height: 15rem;
+.max-h-7 {
+  max-height: 1.75rem;
+}
+.max-h-20 {
+  max-height: 5rem;
 }
 .min-h-screen {
   min-height: 100vh;
@@ -576,8 +588,8 @@ video {
 .max-w-xl {
   max-width: 36rem;
 }
-.flex-auto {
-  flex: 1 1 auto;
+.flex-shrink-0 {
+  flex-shrink: 0;
 }
 .flex-grow {
   flex-grow: 1;
@@ -596,9 +608,6 @@ video {
 }
 .items-center {
   align-items: center;
-}
-.justify-start {
-  justify-content: flex-start;
 }
 .justify-end {
   justify-content: flex-end;
@@ -628,12 +637,6 @@ video {
   --tw-space-y-reverse: 0;
   margin-top: calc(1.25rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(1.25rem * var(--tw-space-y-reverse));
-}
-.self-center {
-  align-self: center;
-}
-.overflow-auto {
-  overflow: auto;
 }
 .overflow-hidden {
   overflow: hidden;
@@ -691,6 +694,10 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(107 114 128 / var(--tw-bg-opacity));
 }
+.bg-green-600 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(22 163 74 / var(--tw-bg-opacity));
+}
 .bg-indigo-500 {
   --tw-bg-opacity: 1;
   background-color: rgb(99 102 241 / var(--tw-bg-opacity));
@@ -702,10 +709,6 @@ video {
 .bg-white {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity));
-}
-.bg-green-600 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(22 163 74 / var(--tw-bg-opacity));
 }
 .p-16 {
   padding: 4rem;
@@ -759,6 +762,15 @@ video {
 }
 .pt-5 {
   padding-top: 1.25rem;
+}
+.pt-7 {
+  padding-top: 1.75rem;
+}
+.pt-20 {
+  padding-top: 5rem;
+}
+.pt-10 {
+  padding-top: 2.5rem;
 }
 .text-left {
   text-align: left;
