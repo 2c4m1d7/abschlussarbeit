@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import secureApi from '../api/secureApi';
 import Header from '../components/Header';
 import NewDbModal from '../components/NewDbModal';
-import  AccountModal  from '../components/AccountModal';
+import AccountModal from '../components/AccountModal';
 
 
 
@@ -52,7 +52,7 @@ function MainPage() {
     }, [])
 
     const addDatabase = (newDbName, password) => {
-        secureApi.post('/redis/database', {dbName: newDbName,  password: password })
+        secureApi.post('/redis/database', { dbName: newDbName, password: password })
             .then(response => {
                 fetchDbs()
             })
@@ -82,35 +82,53 @@ function MainPage() {
                 console.log(error)
             })
     }
+
+    const handleSelectAllDatabases = () => {
+        const allDatabaseIds = databases.map(db => db.id);
+
+        if (selectedDatabases.length === allDatabaseIds.length) {
+            setSelectedDatabases([]);
+        } else {
+            setSelectedDatabases(allDatabaseIds);
+        }
+    };
     return (
-        <div className="h-screen bg-gray-100 flex items-center justify-center">
+
+        <div className="h-screen bg-gray-100 flex items-center justify-center flex-col">
             <Header handleOpenAccountModal={handleOpenAccountModal} />
 
             {isModalOpen && (
                 <NewDbModal handleCloseModal={handleCloseModal} addDatabase={addDatabase} />
             )}
 
-
-            {isAccountModalOpen && ( 
+            {isAccountModalOpen && (
                 <AccountModal handleCloseModal={handleCloseAccountModal} />
             )}
 
-            <main className="mx-auto max-w-lg bg-white p-8 mt-7 rounded-xl shadow-md">
+
+            <main className="overflow-y-auto mx-auto max-w-lg bg-white p-8 mt-7 rounded-xl shadow-md ">
                 <section className="flex items-center space-x-4 mb-7">
                     <h1 className="text-gray-800 text-xl font-semibold">Redis Databases</h1>
                     <FaDatabase size={38} className="text-blue-600" />
                 </section>
 
                 <section className="my-4">
-                    <button onClick={handleOpenModal} className="px-4 py-2 bg-blue-600 text-white rounded-lg mb-4">
-                        <IoMdAddCircleOutline className="inline-block mr-2" /> Add Database
-                    </button>
+                    <div className="flex space-x-4 mb-4">
+                        <button onClick={handleOpenModal} className="px-4 py-2 bg-blue-600 text-white rounded-lg">
+                            <IoMdAddCircleOutline className="inline-block mr-2" /> Add Database
+                        </button>
 
-                    <button onClick={handleRemoveDatabases} disabled={selectedDatabases.length === 0} className="px-4 py-2 bg-red-600 text-white rounded-lg mb-4 ml-4">
-                        <MdDelete className="inline-block mr-2" /> Remove
-                    </button>
+                        <button onClick={handleRemoveDatabases} disabled={selectedDatabases.length === 0} className="px-4 py-2 bg-red-600 text-white rounded-lg">
+                            <MdDelete className="inline-block mr-2" /> Remove
+                        </button>
+                    </div>
 
-                    <div className="space-y-2">
+                    {databases.length > 0 && (
+                        <button onClick={handleSelectAllDatabases} className="px-4 py-2 bg-green-600 text-white rounded-lg w-full mb-4">
+                            {selectedDatabases.length === databases.length ? "Deselect All" : "Select All"}
+                        </button>
+                    )}
+                    <div className="space-y-2 overflow-y-auto h-60">
                         {databases.map((db) => (
                             <DatabaseRow
                                 db={db}

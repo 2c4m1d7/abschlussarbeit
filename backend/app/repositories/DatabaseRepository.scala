@@ -26,8 +26,9 @@ class DatabaseRepository @Inject() (
 
   def getDatabasesByUserId(userId: UUID): Future[Seq[DatabaseRow]] =
     dbConfig.db.run(
-      databases.filter(_.userId === userId).result
+      databases.filter(_.userId === userId).sortBy(_.createdAt.desc).result
     )
+
 
   def getDatabaseByIdsIn(
       databaseIds: Seq[UUID],
