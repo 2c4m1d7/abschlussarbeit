@@ -22,7 +22,7 @@ import java.util.UUID
 import models.dtos.DatabaseResponse
 import repositories.DatabaseRepository
 import models.dtos.DatabaseListResponse
-import models.DatabaseRow
+import models.RedisDatabase
 import models.dtos.DatabaseListInfo
 import scala.util.Success
 import scala.util.Failure
@@ -56,9 +56,9 @@ class RedisService @Inject() (implicit
   val redisDirPath = configuration.get[String]("redis_directory")
   val log = LoggerFactory.getLogger(this.getClass());
 
-  def create(dbRow: DatabaseRow, user: User, redisConf: String): Future[Int] = {
+  def create(redisDb: RedisDatabase, user: User, redisConf: String): Future[Int] = {
     databaseRepository
-      .getDatabaseByNameAndUserId(dbRow.name, dbRow.userId)
+      .getDatabaseByNameAndUserId(redisDb.name, redisDb.userId)
       .flatMap {
         case Some(existingDb) =>
           Future.failed(new RuntimeException("Database already exists"))
@@ -83,7 +83,7 @@ class RedisService @Inject() (implicit
           }
 
           val dbDir =
-            new File(redisDirPath + "/" + user.username + "/" + dbRow.name)
+            new File(redisDirPath + "/" + user.username + "/" + redisDb.name)
           if (!dbDir.exists() && !dbDir.mkdir()) {
             return Future.failed(
               new RuntimeException(
@@ -97,13 +97,13 @@ class RedisService @Inject() (implicit
             redisConf
           )
 
-          databaseRepository.addDatabase(dbRow).flatMap { _ =>
-            start(dbRow, user)
+          databaseRepository.addDatabase(redisDb).flatMap { _ =>
+            start(redisDb, user)
           }
       }
   }
 
-  def start(db: DatabaseRow, user: User): Future[Int] = {
+  def start(db: RedisDatabase, user: User): Future[Int] = {
     databaseRepository
       .getPort(db.id)
       .flatMap {
@@ -120,7 +120,7 @@ class RedisService @Inject() (implicit
   }
 
   private def startRedisInstance(
-      db: DatabaseRow,
+      db: RedisDatabase,
       user: User,
       startPort: Int = 49152
   ): Future[Int] = synchronized {
@@ -185,13 +185,13 @@ class RedisService @Inject() (implicit
 
     val deleteTasks = databaseIds.map { id =>
       for {
-        dbRowOption <- databaseRepository.getDatabaseById(id)
-        _ <- dbRowOption match {
-          case Some(dbRow) if dbRow.port.isDefined => stopRedis(dbRow)
+        redisDbOption <- databaseRepository.getDatabaseById(id)
+        _ <- redisDbOption match {
+          case Some(redisDb) if redisDb.port.isDefined => stopRedis(redisDb)
           case _                                   => Future.successful(())
         }
         _ <- deleteFromRepository(id)
-        _ <- deleteDirectory(dbRowOption.map(_.name).getOrElse(""), user)
+        _ <- deleteDirectory(redisDbOption.map(_.name).getOrElse(""), user)
       } yield ()
     }
 
@@ -280,24 +280,24 @@ class RedisService @Inject() (implicit
       })
   }
 
-  private def stopRedis(dbRow: DatabaseRow): Future[Unit] = {
+  private def stopRedis(redisDb: RedisDatabase): Future[Unit] = {
     for {
-      userOpt <- userRepository.getUserById(dbRow.userId)
+      userOpt <- userRepository.getUserById(redisDb.userId)
       user = userOpt.getOrElse(
         throw new RuntimeException("User not found")
       )
       redisConfigPath =
-        s"$redisDirPath/${user.username}/${dbRow.name}/redis.conf"
+        s"$redisDirPath/${user.username}/${redisDb.name}/redis.conf"
       authPassword = RedisConfigReader
         .extractPassword(redisConfigPath)
         .getOrElse("")
       _ <- {
-        val managerOpt = redisManagers.get(dbRow.id)
+        val managerOpt = redisManagers.get(redisDb.id)
         managerOpt match {
           case Some(manager) =>
             manager.stop()
             manager.whenStopped().map { _ =>
-              redisManagers.remove(dbRow.id)
+              redisManagers.remove(redisDb.id)
             }
           case None => Future.successful(())
         }
@@ -307,7 +307,7 @@ class RedisService @Inject() (implicit
 
   def shutdownAllRedisInstances: Future[Unit] = {
     databaseRepository.getAllActiveDatabases.flatMap { dbs =>
-      val shutdownFutures = dbs.map(dbRow => stopRedis(dbRow))
+      val shutdownFutures = dbs.map(redisDb => stopRedis(redisDb))
       Future.sequence(shutdownFutures).map(_ => ())
     }
   }

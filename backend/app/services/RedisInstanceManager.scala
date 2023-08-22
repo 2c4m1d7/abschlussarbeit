@@ -10,14 +10,14 @@ import javax.inject.Inject
 import scredis.exceptions.RedisIOException
 import play.api.Logger
 import repositories.DatabaseRepository
-import models.DatabaseRow
+import models.RedisDatabase
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Promise
 import scala.concurrent.Future
 
 class RedisInstanceManager @Inject() (
     redisInstance: Redis,
-    dbRow: DatabaseRow,
+    redisDb: RedisDatabase,
     stopCommand: String
 )(implicit
     configuration: Configuration,
@@ -66,7 +66,7 @@ class RedisInstanceManager @Inject() (
     try {
       redisInstance.quit()
       stopCommand.!
-      databaseRepository.updateDatabasePort(dbRow.id, None).recover {
+      databaseRepository.updateDatabasePort(redisDb.id, None).recover {
         case ex: Exception => logger.error("Failed to update database port", ex)
       }
        isStopped = true

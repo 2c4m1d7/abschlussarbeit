@@ -5,7 +5,7 @@ import play.api.db.slick.DatabaseConfigProvider
 import scala.concurrent.ExecutionContext
 import play.api.db.slick.HasDatabaseConfigProvider
 import slick.jdbc.JdbcProfile
-import models.DatabaseRow
+import models.RedisDatabase
 import java.util.UUID
 import java.sql.Timestamp
 import slick.sql.SqlProfile
@@ -21,10 +21,10 @@ class DatabaseRepository @Inject() (
   import profile.api._
   private val databases = TableQuery[DatabaseTable]
 
-  def getAllDatabases: Future[Seq[DatabaseRow]] =
+  def getAllDatabases: Future[Seq[RedisDatabase]] =
     dbConfig.db.run(databases.result)
 
-  def getDatabasesByUserId(userId: UUID): Future[Seq[DatabaseRow]] =
+  def getDatabasesByUserId(userId: UUID): Future[Seq[RedisDatabase]] =
     dbConfig.db.run(
       databases.filter(_.userId === userId).sortBy(_.createdAt.desc).result
     )
@@ -33,7 +33,7 @@ class DatabaseRepository @Inject() (
   def getDatabaseByIdsIn(
       databaseIds: Seq[UUID],
       userId: UUID
-  ): Future[Seq[DatabaseRow]] =
+  ): Future[Seq[RedisDatabase]] =
     dbConfig.db.run(
       databases
         .filter(db => db.id.inSet(databaseIds) && db.userId === userId)
@@ -57,7 +57,7 @@ def updateDatabasePort(databaseId: UUID, port: Option[Int]): Future[Int] = {
 }
 
 
-  def getAllActiveDatabases: Future[Seq[DatabaseRow]] = {
+  def getAllActiveDatabases: Future[Seq[RedisDatabase]] = {
     dbConfig.db.run(
       databases.filter(_.port.isDefined).result
     )
@@ -66,7 +66,7 @@ def updateDatabasePort(databaseId: UUID, port: Option[Int]): Future[Int] = {
   def getDatabaseByNameAndUserId(
       name: String,
       userId: UUID
-  ): Future[Option[DatabaseRow]] =
+  ): Future[Option[RedisDatabase]] =
     dbConfig.db.run(
       databases
         .filter(db => db.name === name && db.userId === userId)
@@ -74,7 +74,7 @@ def updateDatabasePort(databaseId: UUID, port: Option[Int]): Future[Int] = {
         .headOption
     )
 
-  def getDatabaseById(databaseId: UUID): Future[Option[DatabaseRow]] = {
+  def getDatabaseById(databaseId: UUID): Future[Option[RedisDatabase]] = {
     dbConfig.db.run(
       databases.filter(_.id === databaseId).result.headOption
     )
@@ -91,7 +91,7 @@ def updateDatabasePort(databaseId: UUID, port: Option[Int]): Future[Int] = {
   def getDatabaseByIdAndUserId(
       databaseId: UUID,
       userId: UUID
-  ): Future[Option[DatabaseRow]] = {
+  ): Future[Option[RedisDatabase]] = {
     dbConfig.db.run(
       databases
         .filter(db => db.id === databaseId && db.userId === userId)
@@ -100,12 +100,12 @@ def updateDatabasePort(databaseId: UUID, port: Option[Int]): Future[Int] = {
     )
   }
 
-  def getDatabaseByName(name: String): Future[Option[DatabaseRow]] =
+  def getDatabaseByName(name: String): Future[Option[RedisDatabase]] =
     dbConfig.db.run(
       databases.filter(_.name === name).result.headOption
     )
 
-  def addDatabase(database: DatabaseRow): Future[UUID] =
+  def addDatabase(database: RedisDatabase): Future[UUID] =
     dbConfig.db.run(
       databases.returning(databases.map(_.id)) += database
     )
@@ -123,7 +123,7 @@ def updateDatabasePort(databaseId: UUID, port: Option[Int]): Future[Int] = {
     )
 
   private class DatabaseTable(tag: Tag)
-      extends Table[DatabaseRow](tag, "databases") {
+      extends Table[RedisDatabase](tag, "databases") {
 
     def id = column[UUID]("id", O.PrimaryKey)
     def userId = column[UUID]("user_id")
@@ -142,6 +142,6 @@ def updateDatabasePort(databaseId: UUID, port: Option[Int]): Future[Int] = {
       name,
       createdAt,
       port
-    ) <> ((DatabaseRow.apply _).tupled, DatabaseRow.unapply)
+    ) <> ((RedisDatabase.apply _).tupled, RedisDatabase.unapply)
   }
 }

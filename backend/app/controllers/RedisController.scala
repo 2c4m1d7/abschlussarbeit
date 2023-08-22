@@ -10,7 +10,7 @@ import auth.SecuredAction
 import scala.concurrent.ExecutionContext
 import java.util.UUID
 import auth.UserRequest
-import models.DatabaseRow
+import models.RedisDatabase
 import java.sql.Timestamp
 import models.dtos.CreateDatabaseRequest
 import utils.RedisConfigGenerator
@@ -51,7 +51,7 @@ class RedisController @Inject() (
             )
             redisService
               .create(
-                DatabaseRow(
+                RedisDatabase(
                   UUID.randomUUID(),
                   request.user.id,
                   databaseRequest.dbName,
