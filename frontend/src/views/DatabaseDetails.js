@@ -16,12 +16,11 @@ const DatabaseDetails = () => {
     const navigate = useNavigate();
 
     const handleBack = () => {
-        console.log("What?")
         navigate(-1)
     };
 
     useEffect(() => {
-        secureApi.get(`database/${id}`)
+        secureApi.get(`${id}`)
             .then(response => {
                 setDetails(response.data)
             })
