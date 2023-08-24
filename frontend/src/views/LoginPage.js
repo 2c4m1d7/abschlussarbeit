@@ -8,8 +8,8 @@ import { fetchUser } from '../redux/thunks/userThunks';
 
 const LoginPage = (props) => {
   const dispatch = useDispatch();
-  const [username, setUsername] = useState('user01');
-  const [password, setPassword] = useState('password1');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = (event) => {
