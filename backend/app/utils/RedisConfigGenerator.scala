@@ -16,6 +16,7 @@ object RedisConfigGenerator {
        |appendonly $appendonly
        |dir $dirPath
        |dbfilename $dbName
+       |protected-mode no
        |${if (password.isBlank()) '#' else ""}requirepass $password
        """.stripMargin
   }
