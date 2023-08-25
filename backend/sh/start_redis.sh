@@ -14,24 +14,9 @@ chmod 600 $path
 redis-server $path --port $port > /dev/null 2>&1 &
 
 
-
 max_attempts=5
 interval=0.2  
 attempt=1
-
-# while [ $attempt -le $max_attempts ]; do
-#  if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null; then
-#     echo "Port $port is already in use."
-#     exit 0
-# fi
-
-#   sleep $interval
-#   ((attempt++))
-# done
-
-# echo "Failed to establish connection to Redis instance within the given timeout."
-# exit 1
-
 
 
 while [ $attempt -le $max_attempts ]; do
