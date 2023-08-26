@@ -1,13 +1,13 @@
 
 import { getUserSuccess, loginSuccess, logout, requestUser } from "../slices/userSlice"
-import secureApi from "../../api/secureApi";
+import securedApi from "../../api/securedApi";
 
 export const fetchUser =
   () => (dispatch, getState) => {
 
     dispatch(requestUser())
 
-    return secureApi.get("user")
+    return securedApi.get("user")
       .then(response => {
         dispatch(getUserSuccess(response.data))
       })

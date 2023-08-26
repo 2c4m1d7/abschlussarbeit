@@ -7,7 +7,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import sys.process._
-import services.RedisInstanceManager
+import monitors.RedisInstanceMonitor
 import akka.actor.ActorSystem
 import scredis.Redis
 import java.io.File
@@ -49,8 +49,8 @@ class RedisService @Inject() (implicit
     cs: CoordinatedShutdown
 ) {
 
-  private val redisManagers
-      : scala.collection.concurrent.Map[UUID, RedisInstanceManager] =
+  private val redisMonitors
+      : scala.collection.concurrent.Map[UUID, RedisInstanceMonitor] =
     scala.collection.concurrent.TrieMap()
   val redisHost = configuration.get[String]("redis_host")
   val redisDirPath = configuration.get[String]("redis_directory")
@@ -155,8 +155,8 @@ class RedisService @Inject() (implicit
             }
 
             val manager =
-              new RedisInstanceManager(redisInstance, db, stopCommand)
-            redisManagers.put(db.id, manager)
+              new RedisInstanceMonitor(redisInstance, db, stopCommand)
+            redisMonitors.put(db.id, manager)
             new Thread(manager).start()
             databaseRepository.updateDatabasePort(db.id, Some(redisPort))
             Future.successful(redisPort)
@@ -292,12 +292,12 @@ class RedisService @Inject() (implicit
         .extractPassword(redisConfigPath)
         .getOrElse("")
       _ <- {
-        val managerOpt = redisManagers.get(redisDb.id)
+        val managerOpt = redisMonitors.get(redisDb.id)
         managerOpt match {
           case Some(manager) =>
             manager.stop()
             manager.whenStopped().map { _ =>
-              redisManagers.remove(redisDb.id)
+              redisMonitors.remove(redisDb.id)
             }
           case None => Future.successful(())
         }

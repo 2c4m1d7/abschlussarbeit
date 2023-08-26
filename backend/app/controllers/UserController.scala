@@ -21,7 +21,6 @@ class UserController @Inject() (
     userService: UserService,
     cc: ControllerComponents,
     securedAction: SecuredAction,
-    auth: AuthManager
 )(implicit
     executionContext: ExecutionContext
 ) extends AbstractController(cc) {

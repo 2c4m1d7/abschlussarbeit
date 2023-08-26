@@ -10,7 +10,7 @@ import { fetchUser } from './redux/thunks/userThunks';
 import DatabaseDetails from './views/DatabaseDetails';
 
 const App = () => {
-  const { isLoggedIn, loading, error } = useSelector(state => state.login);
+  const { isLoggedIn, loading, error } = useSelector(state => state.user);
   const dispatch = useDispatch();
 
   useEffect(() => {

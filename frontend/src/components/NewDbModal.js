@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import secureApi from '../api/secureApi';
+import securedApi from '../api/securedApi';
 import unsecuredApi from '../api/unsecuredApi';
 
 const NewDbModal = ({ handleCloseModal, addDatabase }) => {
@@ -15,7 +15,7 @@ const NewDbModal = ({ handleCloseModal, addDatabase }) => {
 
     const doesDatabaseExist = (name) => {
 
-        secureApi.get('/redis/exists/' + name)
+        securedApi.get('/redis/exists/' + name)
             .then(response => {
                 if (response.data) {
                     setError('A database with this name already exists.');

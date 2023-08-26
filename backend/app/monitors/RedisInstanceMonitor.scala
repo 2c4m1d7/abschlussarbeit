@@ -1,4 +1,4 @@
-package services
+package monitors
 
 import scala.sys.process._
 import scredis._
@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Promise
 import scala.concurrent.Future
 
-class RedisInstanceManager @Inject() (
+class RedisInstanceMonitor @Inject() (
     redisInstance: Redis,
     redisDb: RedisDatabase,
     stopCommand: String
@@ -30,7 +30,7 @@ class RedisInstanceManager @Inject() (
   private val RedisHost = configuration.get[String]("redis_host")
   private val MonitoringThreadConnectionCount = 1
   private val SleepDurationMillis = 1000
-  private val MaxTimeNotInUseSec = 36000
+  private val MaxTimeNotInUseSec = 3600
 
   private val stoppedPromise: Promise[Unit] = Promise[Unit]()
   var isStopped = false

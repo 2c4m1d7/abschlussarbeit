@@ -1,10 +1,10 @@
-// secureApi.js
+
 import unsecuredApi from './unsecuredApi';
 import axios from 'axios';
 
 const API_BASE_URL = process.env.NODE_ENV === 'production' ? '/api' : '';
 
-const secureApi = axios.create({
+const securedApi = axios.create({
     baseURL: API_BASE_URL,
     timeout: 5000,
     headers: {
@@ -12,7 +12,7 @@ const secureApi = axios.create({
     },
 });
 
-secureApi.interceptors.request.use(
+securedApi.interceptors.request.use(
     config => {
         const accessToken = localStorage.getItem('accessToken');
         if (accessToken) {
@@ -24,7 +24,7 @@ secureApi.interceptors.request.use(
         Promise.reject(error)
     });
 
-secureApi.interceptors.response.use((response) => {
+securedApi.interceptors.response.use((response) => {
     return response
 }, async function (error) {
     const originalRequest = error.config;
@@ -34,7 +34,7 @@ secureApi.interceptors.response.use((response) => {
         try {
             const accessToken = (await unsecuredApi.post('token/refresh', { refreshToken: refreshToken })).data
             localStorage.setItem('accessToken', accessToken);
-            return secureApi(originalRequest);
+            return securedApi(originalRequest);
         } catch (ex) {
             return Promise.reject(ex);
         }
@@ -42,4 +42,4 @@ secureApi.interceptors.response.use((response) => {
     return Promise.reject(error);
 });
 
-export default secureApi;
+export default securedApi;

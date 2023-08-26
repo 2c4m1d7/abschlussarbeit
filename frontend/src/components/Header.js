@@ -10,7 +10,7 @@ const Header = ({ handleOpenAccountModal }) => {
 
 
     const dispatch = useDispatch();
-    const { loading, user } = useSelector(state => state.login);
+    const { loading, user } = useSelector(state => state.user);
 
 
     return (

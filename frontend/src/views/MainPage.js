@@ -8,7 +8,7 @@ import { IoMdAddCircleOutline } from 'react-icons/io';
 import DatabaseRow from '../components/DatabaseRow';
 import { logout } from '../redux/slices/userSlice';
 import { useNavigate } from 'react-router-dom';
-import secureApi from '../api/secureApi';
+import securedApi from '../api/securedApi';
 import Header from '../components/Header';
 import NewDbModal from '../components/NewDbModal';
 import AccountModal from '../components/AccountModal';
@@ -17,15 +17,15 @@ import AccountModal from '../components/AccountModal';
 
 function MainPage() {
     const navigate = useNavigate();
-    const { loading, user } = useSelector(state => state.login);
+    const { loading, user } = useSelector(state => state.user);
     const [databases, setDatabases] = useState([]);
     const [selectedDatabases, setSelectedDatabases] = useState([]);
 
-    const [isAccountModalOpen, setIsAccountModalOpen] = useState(false); // new code
+    const [isAccountModalOpen, setIsAccountModalOpen] = useState(false); 
 
-    // New handlers for the account modal
-    const handleOpenAccountModal = () => setIsAccountModalOpen(true); // new code
-    const handleCloseAccountModal = () => setIsAccountModalOpen(false); // new code
+
+    const handleOpenAccountModal = () => setIsAccountModalOpen(true); 
+    const handleCloseAccountModal = () => setIsAccountModalOpen(false); 
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const handleOpenModal = () => {
@@ -39,7 +39,7 @@ function MainPage() {
 
 
     const fetchDbs = () => {
-        secureApi.get('databases')
+        securedApi.get('databases')
             .then(response => {
                 setDatabases(response.data.databases)
             })
@@ -52,7 +52,7 @@ function MainPage() {
     }, [])
 
     const addDatabase = (newDbName, password) => {
-        secureApi.post('/redis/database', { dbName: newDbName, password: password })
+        securedApi.post('/redis/database', { dbName: newDbName, password: password })
             .then(response => {
                 fetchDbs()
             })
@@ -73,7 +73,7 @@ function MainPage() {
     }
     const handleRemoveDatabases = () => {
 
-        secureApi.delete('redis/delete-batch', { data: selectedDatabases })
+        securedApi.delete('redis/delete-batch', { data: selectedDatabases })
             .then(response => {
                 setSelectedDatabases([]);
                 fetchDbs()

@@ -2,7 +2,7 @@ import { loginSuccess, requestLogin, logout, loginFailed } from "../slices/userS
 import jwt_decode from "jwt-decode";
 import { fetchUser } from "./userThunks";
 import unsecuredApi from "../../api/unsecuredApi";
-import secureApi from "../../api/secureApi";
+import securedApi from "../../api/securedApi";
 
 
 export const login =
@@ -16,7 +16,7 @@ export const login =
                 dispatch(fetchUser())
                     .then(dispatch(loginSuccess()))
                     .catch(error => console.log(error))
-                    return
+                return
             })
             .catch(error => {
                 dispatch(loginFailed(error))
