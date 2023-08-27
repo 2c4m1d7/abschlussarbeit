@@ -147,10 +147,10 @@ class RedisService @Inject() (implicit
 
           try {
 
-            val manager =
+            val monitor =
               new RedisInstanceMonitor(redisInstance, db)
-            redisMonitors.put(db.id, manager)
-            new Thread(manager).start()
+            redisMonitors.put(db.id, monitor)
+            new Thread(monitor).start()
             databaseRepository.updateDatabasePort(db.id, Some(redisPort))
             Future.successful(redisPort)
           } catch {
@@ -164,6 +164,7 @@ class RedisService @Inject() (implicit
         }
 
       case None =>
+        log.warn("No available ports found")
         Future.failed(
           new RuntimeException(
             "An error occurred while starting Redis instance"
@@ -183,20 +184,20 @@ class RedisService @Inject() (implicit
           case Some(redisDb) if redisDb.port.isDefined => stopRedis(redisDb)
           case _                                   => Future.successful(())
         }
-        _ <- deleteFromRepository(id)
         _ <- deleteDirectory(redisDbOption.map(_.name).getOrElse(""), user)
       } yield ()
     }
 
-    Future.sequence(deleteTasks).map(_ => ())
+    Future.sequence(deleteTasks).map(_ => deleteFromDatabase(databaseIds, user.id))
   }
 
-  private def deleteFromRepository(id: UUID): Future[Unit] = {
-    databaseRepository.deleteDatabaseById(id).map(_ => ()).recoverWith {
+  private def deleteFromDatabase(databaseIds: Seq[UUID], userId: UUID): Future[Unit] = {
+    databaseRepository.deleteDatabaseByIdsIn(databaseIds, userId).map(_ => ()).recoverWith {
       case e =>
+        log.error(s"Failed to delete databases with IDs: $databaseIds", e)
         Future.failed(
           new RuntimeException(
-            s"Failed to delete database with ID: $id. Error: ${e.getMessage}"
+            s"Failed to delete databases"
           )
         )
     }
@@ -212,8 +213,9 @@ class RedisService @Inject() (implicit
         FileUtils.deleteDir(userDirPath)
       }
     }.recover { case e =>
+      log.error(s"Failed to delete directory for database: $dbName", e)
       Future.failed(
-        new Exception(
+        new RuntimeException(
           s"Failed to delete directory for database: $dbName. Error: ${e.getMessage}"
         )
       )
@@ -285,11 +287,11 @@ class RedisService @Inject() (implicit
         .extractPassword(redisConfigPath)
         .getOrElse("")
       _ <- {
-        val managerOpt = redisMonitors.get(redisDb.id)
-        managerOpt match {
-          case Some(manager) =>
-            manager.stop()
-            manager.whenStopped().map { _ =>
+        val monitorOpt = redisMonitors.get(redisDb.id)
+        monitorOpt match {
+          case Some(monitor) =>
+            monitor.stop()
+            monitor.whenStopped().map { _ =>
               redisMonitors.remove(redisDb.id)
             }
           case None => Future.successful(())

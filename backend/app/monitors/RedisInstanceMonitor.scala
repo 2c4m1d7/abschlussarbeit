@@ -26,13 +26,11 @@ class RedisInstanceMonitor @Inject() (
 
   private val logger = Logger(this.getClass)
 
-  private val RedisHost = configuration.get[String]("redis_host")
-  private val MonitoringThreadConnectionCount = 1
+  private val MonitoringConnectionCount = 1
   private val SleepDurationMillis = 1000
   private val MaxTimeNotInUseSec = 3600
 
   private val stoppedPromise: Promise[Unit] = Promise[Unit]()
-  var isStopped = false
 
   @volatile private var shouldContinue = true
 
@@ -41,12 +39,11 @@ class RedisInstanceMonitor @Inject() (
 
     while (shouldContinue) {
       Thread.sleep(SleepDurationMillis)
-
       try {
         val connectionQuantity =
           Await.result(redisInstance.clientList(), 5.seconds).size
 
-        if (connectionQuantity < MonitoringThreadConnectionCount + 1) {
+        if (connectionQuantity < MonitoringConnectionCount + 1) {
           timeNotInUse += 1
         } else {
           timeNotInUse = 0
@@ -58,28 +55,25 @@ class RedisInstanceMonitor @Inject() (
       } catch {
         case e: Exception =>
           logger.error("Error while checking Redis connections", e)
-          instanceIsStopped
+          markAsStopped
           shouldContinue = false
       }
     }
 
     try {
       redisInstance.shutdown()
-      instanceIsStopped
-      isStopped = true
+      markAsStopped
       stoppedPromise.success(())
     } catch {
       case e: Exception =>
         logger.error("Failed to execute post-run operations", e)
-        instanceIsStopped
+        markAsStopped
     }
   }
   def whenStopped(): Future[Unit] = stoppedPromise.future
-  def stop(): Unit = {
-    shouldContinue = false
-  }
+  def stop(): Unit = shouldContinue = false
 
-  private def instanceIsStopped: Future[Unit] = {
+  private def markAsStopped: Future[Unit] = {
     databaseRepository.updateDatabasePort(redisDb.id, None).recover {
       case ex: Exception => logger.error("Failed to update database port", ex)
     }

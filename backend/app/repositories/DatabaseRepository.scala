@@ -21,9 +21,7 @@ class DatabaseRepository @Inject() (
   import profile.api._
   private val databases = TableQuery[DatabaseTable]
 
-  def getAllDatabases: Future[Seq[RedisDatabase]] =
-    dbConfig.db.run(databases.result)
-
+  
   def getDatabasesByUserId(userId: UUID): Future[Seq[RedisDatabase]] =
     dbConfig.db.run(
       databases.filter(_.userId === userId).sortBy(_.createdAt.desc).result
@@ -100,20 +98,12 @@ def updateDatabasePort(databaseId: UUID, port: Option[Int]): Future[Int] = {
     )
   }
 
-  def getDatabaseByName(name: String): Future[Option[RedisDatabase]] =
-    dbConfig.db.run(
-      databases.filter(_.name === name).result.headOption
-    )
 
   def addDatabase(database: RedisDatabase): Future[UUID] =
     dbConfig.db.run(
       databases.returning(databases.map(_.id)) += database
     )
 
-  def deleteDatabaseById(databaseId: UUID): Future[Int] =
-    dbConfig.db.run(
-      databases.filter(_.id === databaseId).delete
-    )
 
   def deleteDatabaseByIdsIn(databaseIds: Seq[UUID], userId: UUID): Future[Int] =
     dbConfig.db.run(
