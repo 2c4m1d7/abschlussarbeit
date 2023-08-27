@@ -17,8 +17,7 @@ import scala.concurrent.Future
 
 class RedisInstanceMonitor @Inject() (
     redisInstance: Redis,
-    redisDb: RedisDatabase,
-    stopCommand: String
+    redisDb: RedisDatabase
 )(implicit
     configuration: Configuration,
     databaseRepository: DatabaseRepository,
@@ -59,25 +58,31 @@ class RedisInstanceMonitor @Inject() (
       } catch {
         case e: Exception =>
           logger.error("Error while checking Redis connections", e)
+          instanceIsStopped
           shouldContinue = false
       }
     }
 
     try {
-      redisInstance.quit()
-      stopCommand.!
-      databaseRepository.updateDatabasePort(redisDb.id, None).recover {
-        case ex: Exception => logger.error("Failed to update database port", ex)
-      }
-       isStopped = true
+      redisInstance.shutdown()
+      instanceIsStopped
+      isStopped = true
       stoppedPromise.success(())
     } catch {
       case e: Exception =>
         logger.error("Failed to execute post-run operations", e)
+        instanceIsStopped
     }
   }
   def whenStopped(): Future[Unit] = stoppedPromise.future
   def stop(): Unit = {
     shouldContinue = false
+  }
+
+  private def instanceIsStopped: Future[Unit] = {
+    databaseRepository.updateDatabasePort(redisDb.id, None).recover {
+      case ex: Exception => logger.error("Failed to update database port", ex)
+    }
+    Future {}
   }
 }

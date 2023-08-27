@@ -146,16 +146,9 @@ class RedisService @Inject() (implicit
           )
 
           try {
-            var stopCommand = ""
-            if (authPassword.nonEmpty) {
-              stopCommand =
-                s"redis-cli -a $authPassword -h $redisHost -p ${redisPort} shutdown"
-            } else {
-              stopCommand = s"redis-cli -h $redisHost -p ${redisPort} shutdown"
-            }
 
             val manager =
-              new RedisInstanceMonitor(redisInstance, db, stopCommand)
+              new RedisInstanceMonitor(redisInstance, db)
             redisMonitors.put(db.id, manager)
             new Thread(manager).start()
             databaseRepository.updateDatabasePort(db.id, Some(redisPort))
