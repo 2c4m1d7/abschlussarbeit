@@ -3,11 +3,17 @@ name := """backend"""
 version := "1.0"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
+.settings(
+   Test / javaOptions += "-Dconfig.resource=application.test.conf"
+)
+
+
 
 scalaVersion := "2.13.11"
 
 libraryDependencies += guice
 libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "5.0.0" % Test
+libraryDependencies +=  "org.mockito" % "mockito-core" % "5.5.0" % Test
 libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-slick" % "5.1.0",
   "com.typesafe.play" %% "play-slick-evolutions" % "5.1.0",

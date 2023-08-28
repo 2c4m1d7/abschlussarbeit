@@ -39,12 +39,13 @@ import akka.pattern.ask
 import akka.util.Timeout
 import akka.pattern.AskTimeoutException
 import utils.ConnectionUtils
+import play.api.inject.ApplicationLifecycle
+import java.util.concurrent.CompletableFuture
 
 class RedisService @Inject() (implicit
     configuration: Configuration,
     databaseRepository: DatabaseRepository,
     userRepository: UserRepository,
-    system: ActorSystem,
     ec: ExecutionContext,
     cs: CoordinatedShutdown
 ) {
@@ -52,54 +53,48 @@ class RedisService @Inject() (implicit
   private val redisMonitors
       : scala.collection.concurrent.Map[UUID, RedisInstanceMonitor] =
     scala.collection.concurrent.TrieMap()
-  val redisHost = configuration.get[String]("redis_host")
-  val redisDirPath = configuration.get[String]("redis_directory")
+  lazy val redisHost = configuration.get[String]("redis_host")
+  lazy val redisDirPath = configuration.get[String]("redis_directory")
   val log = LoggerFactory.getLogger(this.getClass());
 
-  def create(redisDb: RedisDatabase, user: User, redisConf: String): Future[Int] = {
+  def create(
+      redisDb: RedisDatabase,
+      user: User,
+      redisConf: String
+  ): Future[Int] = {
+
+    def checkOrCreateDir(path: String): Future[Unit] = {
+      val dir = new File(path)
+      if (!dir.exists() && !dir.mkdir()) {
+        log.error(s"Failed to create directory: $path")
+        Future.failed(
+          new RuntimeException(s"Failed to create directory: $path")
+        )
+      } else {
+        Future.successful(())
+      }
+    }
+
     databaseRepository
       .getDatabaseByNameAndUserId(redisDb.name, redisDb.userId)
       .flatMap {
-        case Some(existingDb) =>
+        case Some(_) =>
           Future.failed(new RuntimeException("Database already exists"))
 
         case None =>
-          val redisDir = new File(redisDirPath)
-          if (!redisDir.exists() && !redisDir.mkdir()) {
-            return Future.failed(
-              new RuntimeException(
-                s"Failed to create directory: ${redisDir.getPath}"
-              )
+          for {
+            _ <- checkOrCreateDir(redisDirPath)
+            _ <- checkOrCreateDir(s"$redisDirPath/${user.username}")
+            _ <- checkOrCreateDir(
+              s"$redisDirPath/${user.username}/${redisDb.name}"
             )
-          }
-
-          val userDir = new File(redisDirPath + "/" + user.username)
-          if (!userDir.exists() && !userDir.mkdir()) {
-            return Future.failed(
-              new RuntimeException(
-                s"Failed to create directory: ${userDir.getPath}"
-              )
+            _ = RedisConfigGenerator.saveToFile(
+              s"$redisDirPath/${user.username}/${redisDb.name}/redis.conf",
+              redisConf
             )
-          }
-
-          val dbDir =
-            new File(redisDirPath + "/" + user.username + "/" + redisDb.name)
-          if (!dbDir.exists() && !dbDir.mkdir()) {
-            return Future.failed(
-              new RuntimeException(
-                s"Failed to create directory: ${dbDir.getPath}"
-              )
-            )
-          }
-
-          RedisConfigGenerator.saveToFile(
-            dbDir.getPath() + "/redis.conf",
-            redisConf
-          )
-
-          databaseRepository.addDatabase(redisDb).flatMap { _ =>
-            start(redisDb, user)
-          }
+            _ <- databaseRepository.addDatabase(redisDb)
+            port <- start(redisDb, user)
+          } yield port
       }
   }
 
@@ -182,25 +177,32 @@ class RedisService @Inject() (implicit
         redisDbOption <- databaseRepository.getDatabaseById(id)
         _ <- redisDbOption match {
           case Some(redisDb) if redisDb.port.isDefined => stopRedis(redisDb)
-          case _                                   => Future.successful(())
+          case _                                       => Future.successful(())
         }
         _ <- deleteDirectory(redisDbOption.map(_.name).getOrElse(""), user)
       } yield ()
     }
 
-    Future.sequence(deleteTasks).map(_ => deleteFromDatabase(databaseIds, user.id))
+    Future
+      .sequence(deleteTasks)
+      .map(_ => deleteFromDatabase(databaseIds, user.id))
   }
 
-  private def deleteFromDatabase(databaseIds: Seq[UUID], userId: UUID): Future[Unit] = {
-    databaseRepository.deleteDatabaseByIdsIn(databaseIds, userId).map(_ => ()).recoverWith {
-      case e =>
+  private def deleteFromDatabase(
+      databaseIds: Seq[UUID],
+      userId: UUID
+  ): Future[Unit] = {
+    databaseRepository
+      .deleteDatabaseByIdsIn(databaseIds, userId)
+      .map(_ => ())
+      .recoverWith { case e =>
         log.error(s"Failed to delete databases with IDs: $databaseIds", e)
         Future.failed(
           new RuntimeException(
             s"Failed to delete databases"
           )
         )
-    }
+      }
   }
 
   private def deleteDirectory(dbName: String, user: User): Future[Unit] =
@@ -233,6 +235,15 @@ class RedisService @Inject() (implicit
       .flatMap {
         case Some(db) =>
           if (db.port.isDefined) {
+            if (!redisMonitors.contains(db.id)) {
+              val redis = connectToRedis(db, user)
+              var monitor = new RedisInstanceMonitor(redis, db)
+              new Thread(monitor).start()
+              redisMonitors.getOrElseUpdate(
+                db.id,
+                monitor
+              )
+            }
             Future.successful(
               DatabaseResponse(
                 id = db.id,
@@ -281,11 +292,6 @@ class RedisService @Inject() (implicit
       user = userOpt.getOrElse(
         throw new RuntimeException("User not found")
       )
-      redisConfigPath =
-        s"$redisDirPath/${user.username}/${redisDb.name}/redis.conf"
-      authPassword = RedisConfigReader
-        .extractPassword(redisConfigPath)
-        .getOrElse("")
       _ <- {
         val monitorOpt = redisMonitors.get(redisDb.id)
         monitorOpt match {
@@ -294,10 +300,34 @@ class RedisService @Inject() (implicit
             monitor.whenStopped().map { _ =>
               redisMonitors.remove(redisDb.id)
             }
-          case None => Future.successful(())
+          case None =>
+            connectToRedis(redisDb, user)
+              .shutdown()
+              .recover { case e => log.error("Redis is not running", e) }
+            databaseRepository.updateDatabasePort(redisDb.id, None)
+            Future.successful(())
         }
       }
     } yield ()
+  }
+
+  private def connectToRedis(
+      db: RedisDatabase,
+      user: User
+  ): Redis = {
+    val redisConfigPath =
+      s"$redisDirPath/${user.username}/${db.name}/redis.conf"
+    val authPassword = RedisConfigReader
+      .extractPassword(redisConfigPath)
+      .getOrElse("")
+    Redis(
+      host = redisHost,
+      port = db.port.get,
+      authOpt =
+        if (authPassword.nonEmpty) Some(AuthConfig(None, authPassword))
+        else None
+    )
+
   }
 
   def shutdownAllRedisInstances: Future[Unit] = {

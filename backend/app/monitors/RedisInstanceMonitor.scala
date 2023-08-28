@@ -15,6 +15,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Promise
 import scala.concurrent.Future
 
+
 class RedisInstanceMonitor @Inject() (
     redisInstance: Redis,
     redisDb: RedisDatabase
@@ -32,7 +33,7 @@ class RedisInstanceMonitor @Inject() (
 
   private val stoppedPromise: Promise[Unit] = Promise[Unit]()
 
-  @volatile private var shouldContinue = true
+   @volatile private var shouldContinue = true
 
   override def run(): Unit = {
     var timeNotInUse = 0

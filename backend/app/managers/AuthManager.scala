@@ -24,12 +24,14 @@ class AuthManager @Inject() (
     ec: ExecutionContext
 ) {
   private val logger = Logger(this.getClass)
-  
+
   def signIn(username: String, password: String): Future[AuthResponse] = {
     for {
       ldapUser <- ldapService.authenticate(username, password)
       userOpt <- userService.findUserByUsername(username)
-      user <- userOpt.map(Future.successful).getOrElse(userService.addUser(ldapUser))
+      user <- userOpt
+        .map(Future.successful)
+        .getOrElse(userService.addUser(ldapUser))
     } yield {
       tokenUtils.generateTokens(user.id)
     }
@@ -40,20 +42,26 @@ class AuthManager @Inject() (
       case Some(decodedClaim: JwtClaim) =>
         val authContent = Json.parse(decodedClaim.content).as[AuthContent]
         authContent match {
-          case AccessTokenContent(userId) => userService.findUserById(userId).flatMap {
-            case Some(user) => Future.successful(user)
-            case None => Future.failed(UserNotFoundException(s"User with ID: $userId not found"))
-          }
-          case _ => Future.failed(AccessDeniedException("Access Denied"))
+          case AccessTokenContent(userId) =>
+            userService.findUserById(userId).flatMap {
+              case Some(user) => Future.successful(user)
+              case None =>
+                Future.failed(
+                  AuthManagerExceptions.UserNotFoundException(s"User with ID: $userId not found")
+                )
+            }
+          case _ => Future.failed(AuthManagerExceptions.AccessDeniedException("Access Denied"))
         }
-      case _ => Future.failed(AccessDeniedException("Access Denied"))
+      case _ => Future.failed(AuthManagerExceptions.AccessDeniedException("Access Denied"))
     }
   }
 
-
-  case class UserNotFoundException(message: String) extends RuntimeException(message)
-  case class AccessDeniedException(message: String) extends RuntimeException(message)
-  case class AuthenticationException(message: String) extends RuntimeException(message)
-
 }
-
+  object AuthManagerExceptions {
+    case class UserNotFoundException(message: String)
+        extends RuntimeException(message)
+    case class AccessDeniedException(message: String)
+        extends RuntimeException(message)
+    case class AuthenticationException(message: String)
+        extends RuntimeException(message)
+  }

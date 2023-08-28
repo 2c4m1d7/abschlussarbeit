@@ -17,7 +17,9 @@ import java.util.UUID
 import play.api.ConfigLoader
 import scala.util.Try
 import play.api.Logger
+import javax.inject.Singleton
 
+@Singleton
 class LdapService @Inject() (config: Configuration)(implicit
     ec: ExecutionContext
 ) {

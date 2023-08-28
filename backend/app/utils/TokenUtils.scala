@@ -69,10 +69,10 @@ class TokenUtils @Inject() (configuration: Configuration) {
   }
 
   def getJwtClaims(token: String): Option[JwtClaim] = {
-        Jwt.decode(token, SECRET_KEY, Seq(hmacAlgorithm)).toOption
+    Jwt.decode(token, SECRET_KEY, Seq(hmacAlgorithm)).toOption
   }
 
-  private def generateToken(
+   def generateToken(
       auth: AuthContent,
       currentTimestamp: Long,
       expirationTime: Long

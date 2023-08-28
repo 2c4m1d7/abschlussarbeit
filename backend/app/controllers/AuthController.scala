@@ -4,11 +4,13 @@ import javax.inject._
 import play.api.mvc._
 import scala.concurrent.ExecutionContext
 import managers.AuthManager
+import managers.AuthManagerExceptions
 import models.dtos.{CredentialsRequest, RefreshTokenRequest}
 import scala.concurrent.Future
 import play.api.libs.json._
 import utils.TokenUtils
 import scala.collection.Seq
+import services.LdapService
 
 @Singleton
 class AuthController @Inject() (
@@ -32,7 +34,9 @@ class AuthController @Inject() (
           authManager
             .signIn(credentials.username, credentials.password)
             .map(authResponse => Ok(Json.toJson(authResponse)))
-            .recover { case _ =>
+            .recover { 
+              case _: LdapService.Exceptions.AccessError => BadRequest("Access Denied")
+              case _ =>
               InternalServerError(
                 Json.obj("message" -> "An internal server error has occurred.")
               )
