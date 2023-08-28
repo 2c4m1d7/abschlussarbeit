@@ -6,7 +6,7 @@ import { AiOutlineUser } from 'react-icons/ai';
 import { MdDelete, MdLogout } from 'react-icons/md';
 import { IoMdAddCircleOutline } from 'react-icons/io';
 import DatabaseRow from '../components/DatabaseRow';
-import { logout } from '../redux/slices/userSlice';
+import { logout } from '../redux/slices/sessionSlice';
 import { useNavigate } from 'react-router-dom';
 import securedApi from '../api/securedApi';
 import Header from '../components/Header';
@@ -17,7 +17,7 @@ import AccountModal from '../components/AccountModal';
 
 function MainPage() {
     const navigate = useNavigate();
-    const { loading, user } = useSelector(state => state.user);
+    const { loading, user } = useSelector(state => state.session);
     const [databases, setDatabases] = useState([]);
     const [selectedDatabases, setSelectedDatabases] = useState([]);
 

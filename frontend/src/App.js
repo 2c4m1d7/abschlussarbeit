@@ -5,12 +5,12 @@ import { BrowserRouter as Router, Route, Routes, Navigate, } from "react-router-
 import LoginPage from './views/LoginPage';
 import MainPage from './views/MainPage';
 import { useDispatch, useSelector } from "react-redux";
-import { loginSuccess } from "./redux/slices/userSlice";
+import { loginSuccess } from "./redux/slices/sessionSlice";
 import { fetchUser } from './redux/thunks/userThunks';
 import DatabaseDetails from './views/DatabaseDetails';
 
 const App = () => {
-  const { isLoggedIn, loading, error } = useSelector(state => state.user);
+  const { isLoggedIn, loading, error } = useSelector(state => state.session);
   const dispatch = useDispatch();
 
   useEffect(() => {

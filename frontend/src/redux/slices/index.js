@@ -1,7 +1,7 @@
 import { combineReducers } from '@reduxjs/toolkit';
-import  userReducer  from './userSlice';
+import  sessionReducer  from './sessionSlice';
 
 export default combineReducers({
-  user: userReducer,
+  session: sessionReducer,
 
 });

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from 'react-router-dom';
 import securedApi from '../api/securedApi';
-import { loginSuccess, logout, requestUser } from '../redux/slices/userSlice';
+import { loginSuccess, logout, requestUser } from '../redux/slices/sessionSlice';
 import Header from '../components/Header';
 import { useNavigate } from 'react-router-dom';
 import { AiOutlineClose } from 'react-icons/ai';
@@ -17,7 +17,7 @@ const {
 const DatabaseDetails = () => {
     const dispatch = useDispatch();
     const { id } = useParams();
-    const [details, setDetails] = useState(null)
+    const [details, setDetails] = useState({name:"...", port:"...", createdAt:"..."});
 
     const [isAccountModalOpen, setIsAccountModalOpen] = useState(false); 
 
@@ -42,9 +42,6 @@ const DatabaseDetails = () => {
             })
     }, [id])
 
-    if (!details) {
-        return <p>Loading...</p>;
-    }
     return (
         <div className="h-screen bg-gray-100 flex items-center justify-center">
             <Header handleOpenAccountModal={handleOpenAccountModal} />

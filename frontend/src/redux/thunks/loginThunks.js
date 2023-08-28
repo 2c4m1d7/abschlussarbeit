@@ -1,4 +1,4 @@
-import { loginSuccess, requestLogin, logout, loginFailed } from "../slices/userSlice"
+import { loginSuccess, requestLogin, logout, loginFailed } from "../slices/sessionSlice"
 import jwt_decode from "jwt-decode";
 import { fetchUser } from "./userThunks";
 import unsecuredApi from "../../api/unsecuredApi";

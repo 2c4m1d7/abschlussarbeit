@@ -11,10 +11,6 @@ const DatabaseRow = ({ db, handleDatabaseSelection, isSelected, onClick }) => (
                 e.stopPropagation();  
                 handleDatabaseSelection(db.id);
             }}
-            onChange={(e) => {
-                // e.stopPropagation();        // Prevent row click handler when checkbox is clicked
-                // handleDatabaseSelection(db.id);
-            }} 
             checked={isSelected}
             className="form-checkbox h-5 w-5 text-blue-600 rounded-lg focus:ring-blue-200 focus:outline-none"
         />

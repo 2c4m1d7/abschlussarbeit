@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 
 
 const AccountModal = ({ handleCloseModal }) => {
-    const user = useSelector(state => state.user.user);
+    const user = useSelector(state => state.session.user);
 
     return (
         <div className="fixed z-10 inset-0 overflow-y-auto">

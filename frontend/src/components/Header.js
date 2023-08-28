@@ -1,5 +1,5 @@
 import React from 'react';
-import { logout } from '../redux/slices/userSlice';
+import { logout } from '../redux/slices/sessionSlice';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from "react-redux";
 import { AiOutlineUser } from 'react-icons/ai';
@@ -10,7 +10,7 @@ const Header = ({ handleOpenAccountModal }) => {
 
 
     const dispatch = useDispatch();
-    const { loading, user } = useSelector(state => state.user);
+    const { loading, user } = useSelector(state => state.session);
 
 
     return (

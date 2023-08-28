@@ -1,5 +1,5 @@
 
-import { getUserSuccess, loginSuccess, logout, requestUser } from "../slices/userSlice"
+import { getUserSuccess, loginSuccess, logout, requestUser } from "../slices/sessionSlice"
 import securedApi from "../../api/securedApi";
 
 export const fetchUser =

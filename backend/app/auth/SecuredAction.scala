@@ -44,12 +44,12 @@ class SecuredAction @Inject() (
         authManager
           .verifyToken(token)
           .map(user => Right(new UserRequest(user, request)))
-          .recover { case _ => 
-            logger.warn("Failed to verify access token")
+          .recover { case ex => 
+            logger.warn(s"Failed to verify access token ${token}", ex)
             Left(Results.Unauthorized("Invalid access token")) 
           }
       case None =>
-        logger.warn("Missing access token in the request headers")
+        logger.warn(s"Missing access token in the request headers: ${request}")
         Future.successful(Left(Results.Unauthorized("Access token is missing")))
     }
   }
