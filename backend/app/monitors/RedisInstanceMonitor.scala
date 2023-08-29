@@ -15,7 +15,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Promise
 import scala.concurrent.Future
 
-
 class RedisInstanceMonitor @Inject() (
     redisInstance: Redis,
     redisDb: RedisDatabase
@@ -33,7 +32,7 @@ class RedisInstanceMonitor @Inject() (
 
   private val stoppedPromise: Promise[Unit] = Promise[Unit]()
 
-   @volatile private var shouldContinue = true
+  @volatile private var shouldContinue = true
 
   override def run(): Unit = {
     var timeNotInUse = 0
@@ -51,33 +50,29 @@ class RedisInstanceMonitor @Inject() (
         }
 
         if (timeNotInUse > MaxTimeNotInUseSec) {
-          shouldContinue = false
+          stop()
         }
       } catch {
         case e: Exception =>
           logger.error("Error while checking Redis connections", e)
-          markAsStopped
-          shouldContinue = false
+          stop()
       }
     }
 
     try {
       redisInstance.shutdown()
-      markAsStopped
       stoppedPromise.success(())
     } catch {
       case e: Exception =>
         logger.error("Failed to execute post-run operations", e)
-        markAsStopped
+        stop()
     }
   }
   def whenStopped(): Future[Unit] = stoppedPromise.future
-  def stop(): Unit = shouldContinue = false
-
-  private def markAsStopped: Future[Unit] = {
+  def stop(): Unit = {
     databaseRepository.updateDatabasePort(redisDb.id, None).recover {
       case ex: Exception => logger.error("Failed to update database port", ex)
     }
-    Future {}
+    shouldContinue = false
   }
 }
