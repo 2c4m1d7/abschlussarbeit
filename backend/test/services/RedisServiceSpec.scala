@@ -52,10 +52,6 @@ class RedisServiceSpec extends PlaySpec with MockitoSugar with BeforeAndAfter {
     ""
   )
 
-  before {
-    reset(mockDatabaseRepo, mockConfig, mockUserRepo, mockCs)
-  }
-
   after {
     FileUtils.deleteDir(Path.of("./testData"))
     reset(mockDatabaseRepo, mockConfig, mockUserRepo, mockCs)
@@ -66,12 +62,6 @@ class RedisServiceSpec extends PlaySpec with MockitoSugar with BeforeAndAfter {
     "create a Redis database" when {
 
       "database with the same name already exists" in {
-        when(mockConfig.get[String]("redis_host"))
-          .thenReturn("localhost")
-
-        when(mockConfig.get[String]("redis_directory"))
-          .thenReturn("./testData")
-
         when(mockDatabaseRepo.getDatabaseByNameAndUserId(anyString, any()))
           .thenReturn(
             Future.successful(
@@ -139,8 +129,6 @@ class RedisServiceSpec extends PlaySpec with MockitoSugar with BeforeAndAfter {
         exception.getMessage must startWith("Failed to create directory")
       }
     }
-
-    
 
   }
 

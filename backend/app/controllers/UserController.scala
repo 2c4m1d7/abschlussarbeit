@@ -18,7 +18,6 @@ import auth.UserRequest
 
 @Singleton
 class UserController @Inject() (
-    userService: UserService,
     cc: ControllerComponents,
     securedAction: SecuredAction,
 )(implicit

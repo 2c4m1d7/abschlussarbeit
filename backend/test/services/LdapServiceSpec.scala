@@ -19,8 +19,6 @@ import services.LdapService
 
 class LdapServiceSpec extends PlaySpec {
 
-
-
   val config: Configuration = Configuration.load(Environment.simple())
 
   val ldapService = new LdapService(config)

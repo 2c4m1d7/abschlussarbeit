@@ -39,7 +39,7 @@ function MainPage() {
 
 
     const fetchDbs = () => {
-        securedApi.get('databases')
+        securedApi.get('/redis/databases')
             .then(response => {
                 setDatabases(response.data.databases)
             })

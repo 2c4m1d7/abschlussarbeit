@@ -9,12 +9,12 @@ POST /signin                                    controllers.AuthController.signI
 POST /token/refresh                             controllers.AuthController.refreshToken()
 
 
-# DELETE /redis/delete/:id                       controllers.RedisController.deleteDB(id: String)
+
 DELETE /redis/delete-batch                     controllers.RedisController.deleteDBs()
 POST /redis/database                                        controllers.RedisController.addDB()
 GET /redis/exists/:dbName                           controllers.RedisController.exists(dbName:String)
-GET /database/:id                                controllers.RedisController.getDbDetails(id: String)
-GET /databases                                   controllers.RedisController.getDatabases()
+GET /redis/database/:id                                controllers.RedisController.getDbDetails(id: String)
+GET /redis/databases                                   controllers.RedisController.getDatabases()
 
 
 GET /user                                      controllers.UserController.findUser()

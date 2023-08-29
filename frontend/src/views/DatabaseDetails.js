@@ -32,7 +32,7 @@ const DatabaseDetails = () => {
     };
 
     useEffect(() => {
-        securedApi.get(`/database/${id}`)
+        securedApi.get(`/redis/database/${id}`)
             .then(response => {
                 setDetails(response.data)
             })

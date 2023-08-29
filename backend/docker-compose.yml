@@ -10,6 +10,8 @@ services:
       POSTGRES_DB: internal
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    networks:
+      - internal
 
   openldap:
       image: bitnami/openldap:latest
@@ -21,7 +23,16 @@ services:
         - LDAP_ADMIN_PASSWORD=adminpassword
         - LDAP_USERS=user01,user02
         - LDAP_PASSWORDS=password1,password2
+      networks:
+        - internal
   
+  main_server:
+    build: .
+    ports:
+      - 8080:80
+      - 49152-65535:49152-65535
+    networks:
+      - internal
 
 networks:
   internal:
